@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>Somewhere Elsweyr — Ledger</title>
 <style>
   :root {
@@ -721,7 +724,13 @@
       <div class="topbar-sub">Trade & Finance Ledger</div>
     </div>
   </div>
-  <div class="topbar-time" id="clock"></div>
+  <div style="display:flex;align-items:center;gap:16px">
+    <div id="storageStatus" style="font-size:11px;display:flex;align-items:center;gap:5px;color:var(--text-dim)">
+      <span class="status-dot" id="storageDot"></span>
+      <span id="storageLabel">Checking storage…</span>
+    </div>
+    <div class="topbar-time" id="clock"></div>
+  </div>
 </div>
 
 <!-- ═══ TABS ═══ -->
@@ -1240,13 +1249,58 @@
 // ═══════════════════════════════════════════════
 // DATA LAYER — localStorage persistence
 // ═══════════════════════════════════════════════
+let dbError = null;
+
 const DB = {
   get(key, def) {
     try { return JSON.parse(localStorage.getItem('se_' + key)) ?? def; }
-    catch { return def; }
+    catch(e) { console.warn('DB.get error:', e); return def; }
   },
-  set(key, val) { localStorage.setItem('se_' + key, JSON.stringify(val)); }
+  set(key, val) {
+    try {
+      localStorage.setItem('se_' + key, JSON.stringify(val));
+      dbError = null;
+      showSaveIndicator();
+    } catch(e) {
+      dbError = e.message || 'Storage full or blocked';
+      console.error('DB.set error:', e);
+      showSaveError(dbError);
+    }
+  }
 };
+
+// ═══════════════════════════════════════════════
+// SAVE INDICATOR
+// ═══════════════════════════════════════════════
+function showSaveIndicator() {
+  let el = document.getElementById('saveIndicator');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'saveIndicator';
+    el.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--green-dim);color:var(--green);padding:6px 16px;border-radius:20px;font-size:12px;font-weight:600;z-index:9000;opacity:0;transition:opacity 0.3s;pointer-events:none;border:1px solid rgba(52,211,153,0.2);';
+    document.body.appendChild(el);
+  }
+  el.textContent = '✓ Saved';
+  el.style.opacity = '1';
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => { el.style.opacity = '0'; }, 1500);
+}
+
+function showSaveError(msg) {
+  let el = document.getElementById('saveIndicator');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'saveIndicator';
+    el.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);padding:6px 16px;border-radius:20px;font-size:12px;font-weight:600;z-index:9000;opacity:0;transition:opacity 0.3s;pointer-events:none;border:1px solid rgba(248,113,113,0.2);';
+    document.body.appendChild(el);
+  }
+  el.style.background = 'var(--red-dim)';
+  el.style.color = 'var(--red)';
+  el.textContent = '⚠ Save failed: ' + msg;
+  el.style.opacity = '1';
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => { el.style.opacity = '0'; }, 4000);
+}
 
 // ═══════════════════════════════════════════════
 // TAB SWITCHING
@@ -1258,6 +1312,29 @@ function switchTab(id) {
   document.getElementById('tab-' + id).classList.add('active');
   renderAll();
 }
+
+// ═══════════════════════════════════════════════
+// STORAGE HEALTH CHECK
+// ═══════════════════════════════════════════════
+function checkStorage() {
+  const dot = document.getElementById('storageDot');
+  const label = document.getElementById('storageLabel');
+  if (!dot || !label) return;
+
+  try {
+    const testKey = '_se_storage_test_';
+    localStorage.setItem(testKey, '1');
+    localStorage.removeItem(testKey);
+    dot.className = 'status-dot status-paid';
+    label.textContent = 'Storage OK';
+    label.style.color = 'var(--green)';
+  } catch(e) {
+    dot.className = 'status-dot status-due';
+    label.textContent = 'Storage blocked!';
+    label.style.color = 'var(--red)';
+  }
+}
+checkStorage();
 
 // ═══════════════════════════════════════════════
 // MODAL HELPERS
@@ -2030,10 +2107,21 @@ document.getElementById('loginPassword')?.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') attemptLogin();
 });
 
-// Gate: only init if logged in
+// Gate: only show ledger if logged in
+// Data loads from localStorage on every renderAll() call regardless
 if (isLoggedIn()) {
   document.getElementById('loginOverlay').classList.add('hidden');
   renderAll();
+} else {
+  // Still load data silently so it's ready on login
+  stockItems = DB.get('stockItems', []);
+  tradeLog = DB.get('tradeLog', []);
+  employees = DB.get('employees', []);
+  rentSettings = DB.get('rentSettings', rentSettings);
+  storageUnits = DB.get('storageUnits', storageUnits.length ? storageUnits : storageUnits);
+  storageHistory = DB.get('storageHistory', []);
+  pricingItems = DB.get('pricingItems', []);
+  calcHistory = DB.get('calcHistory', []);
 }
 
 // ═══════════════════════════════════════════════
