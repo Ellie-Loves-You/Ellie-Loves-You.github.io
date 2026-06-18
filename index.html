@@ -1,0 +1,2307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Somewhere Elsweyr — Ledger</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --bg2: #161822;
+    --bg3: #1c1f2e;
+    --bg4: #242838;
+    --border: #2a2e42;
+    --border-light: #353a50;
+    --text: #d4d7e0;
+    --text-dim: #7a7e94;
+    --text-bright: #eef0f6;
+    --accent: #7c5bf5;
+    --accent2: #5b9bf5;
+    --accent-glow: rgba(124,91,245,0.15);
+    --green: #34d399;
+    --green-dim: rgba(52,211,153,0.12);
+    --red: #f87171;
+    --red-dim: rgba(248,113,113,0.12);
+    --yellow: #fbbf24;
+    --yellow-dim: rgba(251,191,36,0.12);
+    --orange: #fb923c;
+    --orange-dim: rgba(251,146,60,0.12);
+    --radius: 10px;
+    --radius-sm: 6px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.3);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  /* ── Top Bar ── */
+  .topbar {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 0 28px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(12px);
+  }
+  .topbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .topbar-logo {
+    width: 34px; height: 34px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: -1px;
+  }
+  .topbar-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text-bright);
+    letter-spacing: 0.3px;
+  }
+  .topbar-sub {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: -1px;
+  }
+  .topbar-time {
+    font-size: 12px;
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+  }
+  /* ── Tab Navigation ── */
+  .tabs {
+    display: flex;
+    gap: 2px;
+    padding: 0 28px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+  }
+  .tab-btn {
+    padding: 14px 22px;
+    border: none;
+    background: none;
+    color: var(--text-dim);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+  .tab-icon { font-size: 15px; }
+  /* ── Tab Panels ── */
+  .tab-panel { display: none; padding: 28px; max-width: 1280px; margin: 0 auto; }
+  .tab-panel.active { display: block; }
+  /* ── Cards ── */
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px;
+    margin-bottom: 18px;
+  }
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .card-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-bright);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-weight: 600;
+  }
+  .badge-green { background: var(--green-dim); color: var(--green); }
+  .badge-red { background: var(--red-dim); color: var(--red); }
+  .badge-yellow { background: var(--yellow-dim); color: var(--yellow); }
+  .badge-blue { background: var(--accent-glow); color: var(--accent); }
+  /* ── Grid helpers ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; }
+  .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 18px; }
+  /* ── Stat Cards ── */
+  .stat-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    position: relative;
+    overflow: hidden;
+  }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+  .stat-card.purple::before { background: var(--accent); }
+  .stat-card.green::before { background: var(--green); }
+  .stat-card.red::before { background: var(--red); }
+  .stat-card.yellow::before { background: var(--yellow); }
+  .stat-card.orange::before { background: var(--orange); }
+  .stat-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-value { font-size: 26px; font-weight: 700; color: var(--text-bright); margin-top: 4px; }
+  .stat-sub { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+  /* ── Tables ── */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-dim);
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg3);
+    font-weight: 600;
+  }
+  td {
+    padding: 10px 14px;
+    font-size: 13px;
+    border-bottom: 1px solid rgba(42,46,66,0.5);
+    vertical-align: middle;
+  }
+  tr:hover td { background: rgba(124,91,245,0.04); }
+  /* ── Forms ── */
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .form-row-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .form-row-4 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  input, select {
+    padding: 9px 12px;
+    background: var(--bg4);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input:focus, select:focus { border-color: var(--accent); }
+  input::placeholder { color: var(--text-dim); }
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 18px;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #6a4de0; }
+  .btn-green { background: var(--green); color: #0a0e14; }
+  .btn-green:hover { background: #2bc48a; }
+  .btn-red { background: var(--red); color: #fff; }
+  .btn-red:hover { background: #e55; }
+  .btn-yellow { background: var(--yellow); color: #0a0e14; }
+  .btn-yellow:hover { background: #e0a800; }
+  .btn-sm { padding: 5px 12px; font-size: 12px; }
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border-light);
+    color: var(--text-dim);
+  }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+  /* ── Status indicators ── */
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .status-paid { background: var(--green); box-shadow: 0 0 6px rgba(52,211,153,0.4); }
+  .status-due { background: var(--red); box-shadow: 0 0 6px rgba(248,113,113,0.4); }
+  .status-pending { background: var(--yellow); }
+  .status-tag {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .status-tag.paid { background: var(--green-dim); color: var(--green); }
+  .status-tag.due { background: var(--red-dim); color: var(--red); }
+  .status-tag.pending { background: var(--yellow-dim); color: var(--yellow); }
+  /* ── Category pills ── */
+  .cat-pill {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    display: inline-block;
+  }
+  /* ── Storage Grid ── */
+  .storage-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+  }
+  .storage-unit {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    transition: all 0.15s;
+  }
+  .storage-unit:hover { border-color: var(--border-light); }
+  .storage-unit-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .storage-unit-num {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text-bright);
+  }
+  .storage-unit-body { font-size: 13px; }
+  .storage-unit-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+  }
+  .storage-unit-row .label { color: var(--text-dim); font-size: 12px; }
+  .storage-unit-row .value { font-weight: 600; font-size: 13px; }
+  .storage-unit.unpaid { border-color: var(--red); background: rgba(248,113,113,0.05); }
+  /* ── Modal ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    width: 90%;
+    max-width: 520px;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .modal-title { font-size: 16px; font-weight: 700; color: var(--text-bright); }
+  .modal-close {
+    background: none; border: none; color: var(--text-dim);
+    font-size: 22px; cursor: pointer; padding: 0 4px;
+  }
+  .modal-close:hover { color: var(--text); }
+  /* ── Progress Bar ── */
+  .progress-bar {
+    height: 6px;
+    background: var(--bg4);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 8px;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s;
+  }
+  /* ── Misc ── */
+  .divider { height: 1px; background: var(--border); margin: 16px 0; }
+  .section-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin: 20px 0 12px 0;
+  }
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-dim);
+  }
+  .empty-state .icon { font-size: 40px; margin-bottom: 10px; }
+  .action-btns { display: flex; gap: 4px; }
+  .currency { font-weight: 700; }
+  @media (max-width: 768px) {
+    .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+    .form-row, .form-row-3, .form-row-4 { grid-template-columns: 1fr; }
+    .storage-grid { grid-template-columns: 1fr 1fr; }
+  }
+
+  /* ═══ CALCULATOR ═══ */
+  .calc-toggle {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none;
+    color: #fff;
+    font-size: 22px;
+    cursor: pointer;
+    z-index: 150;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 20px rgba(124,91,245,0.4);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .calc-toggle:hover { transform: scale(1.08); box-shadow: 0 6px 28px rgba(124,91,245,0.5); }
+  .calc-toggle.open { transform: rotate(45deg); }
+
+  .calc-popout {
+    display: none;
+    position: fixed;
+    bottom: 88px;
+    right: 24px;
+    width: 300px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 12px 48px rgba(0,0,0,0.5);
+    z-index: 149;
+    overflow: hidden;
+    animation: calcIn 0.18s ease-out;
+  }
+  .calc-popout.show { display: block; }
+  @keyframes calcIn {
+    from { opacity: 0; transform: translateY(12px) scale(0.96); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .calc-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: var(--bg3);
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-bright);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .calc-header button {
+    background: none; border: none; color: var(--text-dim);
+    font-size: 18px; cursor: pointer; padding: 0 2px; line-height: 1;
+  }
+  .calc-header button:hover { color: var(--text); }
+
+  .calc-display {
+    padding: 16px;
+    background: var(--bg4);
+  }
+  .calc-expression {
+    font-size: 13px;
+    color: var(--text-dim);
+    min-height: 18px;
+    text-align: right;
+    word-break: break-all;
+    font-variant-numeric: tabular-nums;
+  }
+  .calc-result {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-bright);
+    text-align: right;
+    word-break: break-all;
+    font-variant-numeric: tabular-nums;
+    margin-top: 4px;
+  }
+
+  .calc-mode-bar {
+    display: flex;
+    gap: 4px;
+    padding: 8px 12px 4px;
+    flex-wrap: wrap;
+  }
+  .calc-mode-btn {
+    padding: 4px 10px;
+    font-size: 10px;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .calc-mode-btn.active {
+    background: var(--accent-glow);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .calc-mode-btn:hover { color: var(--text); }
+
+  .calc-buttons {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 4px;
+    padding: 8px 12px 14px;
+  }
+  .calc-btn {
+    padding: 11px 4px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg3);
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.1s;
+    text-align: center;
+  }
+  .calc-btn:hover { background: var(--bg4); border-color: var(--border-light); }
+  .calc-btn:active { transform: scale(0.95); }
+  .calc-btn.op { background: var(--accent-glow); color: var(--accent); border-color: rgba(124,91,245,0.3); }
+  .calc-btn.equals { background: var(--accent); color: #fff; border-color: var(--accent); grid-column: span 2; }
+  .calc-btn.equals:hover { background: #6a4de0; }
+  .calc-btn.clear { background: var(--red-dim); color: var(--red); border-color: rgba(248,113,113,0.2); }
+  .calc-btn.wide { grid-column: span 2; }
+
+  .calc-memory-bar {
+    display: flex;
+    gap: 4px;
+    padding: 0 12px 10px;
+  }
+  .calc-mbtn {
+    flex: 1;
+    padding: 5px;
+    font-size: 10px;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+  }
+  .calc-mbtn:hover { color: var(--text); border-color: var(--border-light); }
+
+  .calc-history {
+    border-top: 1px solid var(--border);
+    max-height: 140px;
+    overflow-y: auto;
+  }
+  .calc-history-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 7px 16px;
+    font-size: 12px;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(42,46,66,0.3);
+  }
+  .calc-history-item:hover { background: var(--bg3); }
+  .calc-history-expr { color: var(--text-dim); }
+  .calc-history-val { color: var(--green); font-weight: 600; }
+  .calc-history-item:last-child { border-bottom: none; }
+
+  /* ═══ LOGIN SCREEN ═══ */
+  .login-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+  }
+  .login-overlay.hidden { display: none; }
+  .login-bg {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 50% 40%, rgba(124,91,245,0.08) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 30% at 70% 60%, rgba(91,155,245,0.06) 0%, transparent 70%);
+  }
+  .login-card {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 400px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 40px 36px 36px;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+  }
+  .login-logo {
+    width: 56px; height: 56px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: -1px;
+    margin: 0 auto 20px;
+  }
+  .login-title {
+    text-align: center;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-bright);
+    margin-bottom: 4px;
+  }
+  .login-sub {
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-bottom: 28px;
+  }
+  .login-input-wrap {
+    position: relative;
+    margin-bottom: 16px;
+  }
+  .login-input-wrap input {
+    width: 100%;
+    padding: 12px 16px;
+    padding-right: 44px;
+    background: var(--bg4);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .login-input-wrap input:focus { border-color: var(--accent); }
+  .login-toggle-vis {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-size: 16px;
+    cursor: pointer;
+    padding: 4px 6px;
+  }
+  .login-toggle-vis:hover { color: var(--text); }
+  .login-btn {
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(135deg, var(--accent), #6a4de0);
+    border: none;
+    border-radius: var(--radius-sm);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+    margin-top: 4px;
+  }
+  .login-btn:hover { opacity: 0.92; }
+  .login-btn:active { transform: scale(0.98); }
+  .login-error {
+    text-align: center;
+    font-size: 13px;
+    color: var(--red);
+    margin-top: 14px;
+    min-height: 20px;
+    transition: opacity 0.15s;
+  }
+  .login-footer {
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 24px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border);
+  }
+  .login-shake {
+    animation: loginShake 0.4s ease;
+  }
+  @keyframes loginShake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-8px); }
+    40% { transform: translateX(8px); }
+    60% { transform: translateX(-5px); }
+    80% { transform: translateX(5px); }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══ LOGIN SCREEN ═══ -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-bg"></div>
+  <div class="login-card" id="loginCard">
+    <div class="login-logo">SE</div>
+    <div class="login-title">Somewhere Elsweyr</div>
+    <div class="login-sub">Trade & Finance Ledger</div>
+    <div class="login-input-wrap">
+      <input type="password" id="loginPassword" placeholder="Enter password" autocomplete="off">
+      <button class="login-toggle-vis" id="loginToggleVis" onclick="toggleLoginVisibility()">👁️</button>
+    </div>
+    <button class="login-btn" onclick="attemptLogin()">Unlock Ledger</button>
+    <div class="login-error" id="loginError"></div>
+    <div class="login-footer">Authorized personnel only</div>
+  </div>
+</div>
+
+<!-- ═══ TOP BAR ═══ -->
+<div class="topbar">
+  <div class="topbar-brand">
+    <div class="topbar-logo">SE</div>
+    <div>
+      <div class="topbar-title">Somewhere Elsweyr</div>
+      <div class="topbar-sub">Trade & Finance Ledger</div>
+    </div>
+  </div>
+  <div class="topbar-time" id="clock"></div>
+</div>
+
+<!-- ═══ TABS ═══ -->
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('stock')">
+    <span class="tab-icon">📦</span> Stock Management
+  </button>
+  <button class="tab-btn" onclick="switchTab('rentwages')">
+    <span class="tab-icon">🏠</span> Rent & Wages
+  </button>
+  <button class="tab-btn" onclick="switchTab('storage')">
+    <span class="tab-icon">🗄️</span> Storage Units
+  </button>
+  <button class="tab-btn" onclick="switchTab('pricing')">
+    <span class="tab-icon">💰</span> Pricing List
+  </button>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TAB 1 — STOCK MANAGEMENT
+     ═══════════════════════════════════════════ -->
+<div class="tab-panel active" id="tab-stock">
+  <!-- Stats Row -->
+  <div class="grid-4" style="margin-bottom:18px">
+    <div class="stat-card purple">
+      <div class="stat-label">Total Items</div>
+      <div class="stat-value" id="st_totalItems">0</div>
+      <div class="stat-sub">different products</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-label">Stock Entries</div>
+      <div class="stat-value" id="st_totalEntries">0</div>
+      <div class="stat-sub">total quantity</div>
+    </div>
+    <div class="stat-card yellow">
+      <div class="stat-label">Trades Today</div>
+      <div class="stat-value" id="st_tradesToday">0</div>
+      <div class="stat-sub" id="st_tradesTodaySub"></div>
+    </div>
+    <div class="stat-card orange">
+      <div class="stat-label">Low Stock Alerts</div>
+      <div class="stat-value" id="st_lowStock">0</div>
+      <div class="stat-sub">items ≤ 5</div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <!-- Add / Edit Stock -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">📦 Stock Items</div>
+        <div class="btn-group">
+          <button class="btn btn-primary btn-sm" onclick="openStockModal()">+ Add Item</button>
+          <button class="btn btn-ghost btn-sm" onclick="openTradeModal()">🔄 New Trade</button>
+        </div>
+      </div>
+      <div style="margin-bottom:12px">
+        <input type="text" placeholder="🔍 Search stock..." id="st_search" oninput="renderStock()" style="width:100%">
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Category</th>
+              <th>Quantity</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="st_stockTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Trade / Sale Input -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">🔄 Recent Trades & Sales</div>
+        <button class="btn btn-ghost btn-sm" onclick="openTradeModal()">+ Log Trade/Sale</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Type</th>
+              <th>Item</th>
+              <th>Qty</th>
+              <th>G</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="st_tradeTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TAB 2 — RENT & WAGES
+     ═══════════════════════════════════════════ -->
+<div class="tab-panel" id="tab-rentwages">
+  <!-- Rent Stats -->
+  <div class="grid-3" style="margin-bottom:18px">
+    <div class="stat-card red">
+      <div class="stat-label">Rent Reserve</div>
+      <div class="stat-value" id="rw_rentReserve">0 G</div>
+      <div class="stat-sub">rent due weekly</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-label">Wages Paid (Week)</div>
+      <div class="stat-value" id="rw_wagesPaidValue">0 G</div>
+      <div class="stat-sub" id="rw_wagesPaidSub"></div>
+    </div>
+    <div class="stat-card yellow">
+      <div class="stat-label">Wages Owed (Week)</div>
+      <div class="stat-value" id="rw_wagesOwedValue">0 G</div>
+      <div class="stat-sub" id="rw_wagesOwedSub"></div>
+    </div>
+  </div>
+
+  <!-- Rent Section -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">🏠 Rent Tracking <span class="card-badge badge-red" id="rw_rentStatusBadge">—</span></div>
+      <div class="btn-group">
+        <button class="btn btn-primary btn-sm" onclick="openRentModal()">💰 Manage Rent</button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleRentPaid()">Toggle Paid</button>
+      </div>
+    </div>
+    <div class="grid-4">
+      <div>
+        <div style="font-size:12px;color:var(--text-dim);margin-bottom:4px">Weekly Rent</div>
+        <div style="font-size:20px;font-weight:700" id="rw_weeklyRent">0 G</div>
+      </div>
+      <div>
+        <div style="font-size:12px;color:var(--text-dim);margin-bottom:4px">Next Due Date</div>
+        <div style="font-size:20px;font-weight:700" id="rw_nextDue">—</div>
+      </div>
+      <div>
+        <div style="font-size:12px;color:var(--text-dim);margin-bottom:4px">Amount Saved</div>
+        <div style="font-size:20px;font-weight:700;color:var(--green)" id="rw_savedAmount">0 G</div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="rw_rentProgress" style="width:0%;background:var(--green)"></div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:12px;color:var(--text-dim);margin-bottom:4px">Status</div>
+        <div style="font-size:20px;font-weight:700" id="rw_statusText">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Wages Section -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">👷 Employee Wages <span class="card-badge badge-blue" id="rw_empCount">0 employees</span></div>
+      <div class="btn-group">
+        <button class="btn btn-primary btn-sm" onclick="openEmployeeModal()">+ Add Employee</button>
+        <button class="btn btn-ghost btn-sm" onclick="markAllWagesPaid()">Mark All Paid</button>
+        <button class="btn btn-ghost btn-sm" onclick="resetWeeklyWages()">Reset Week</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Employee</th>
+            <th>Weekly Wage</th>
+            <th>Owes Company</th>
+            <th>Due Date</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="rw_empTable"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TAB 3 — STORAGE UNITS
+     ═══════════════════════════════════════════ -->
+<div class="tab-panel" id="tab-storage">
+  <!-- Stats -->
+  <div class="grid-4" style="margin-bottom:18px">
+    <div class="stat-card green">
+      <div class="stat-label">Paid Units</div>
+      <div class="stat-value" id="su_paidCount">0/8</div>
+      <div class="stat-sub">storage units paid</div>
+    </div>
+    <div class="stat-card red">
+      <div class="stat-label">Unpaid Units</div>
+      <div class="stat-value" id="su_unpaidCount">0</div>
+      <div class="stat-sub">overdue units</div>
+    </div>
+    <div class="stat-card purple">
+      <div class="stat-label">Weekly Income</div>
+      <div class="stat-value" id="su_weeklyIncome">0 G</div>
+      <div class="stat-sub">if all paid</div>
+    </div>
+    <div class="stat-card yellow">
+      <div class="stat-label">Outstanding</div>
+      <div class="stat-value" id="su_outstanding">0 G</div>
+      <div class="stat-sub">unpaid amount</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">🗄️ Storage Units <span class="card-badge badge-blue">8 Units</span></div>
+      <div class="btn-group">
+        <button class="btn btn-ghost btn-sm" onclick="su_advanceWeek()">⏭ Advance Week</button>
+        <button class="btn btn-ghost btn-sm" onclick="su_checkOverdue()">⚠ Check Overdue</button>
+      </div>
+    </div>
+    <div class="storage-grid" id="su_grid"></div>
+  </div>
+
+  <div class="card" style="margin-top:18px">
+    <div class="card-header">
+      <div class="card-title">📋 Storage History Log</div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Unit</th>
+            <th>Owner</th>
+            <th>Amount</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="su_history"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TAB 4 — PRICING LIST
+     ═══════════════════════════════════════════ -->
+<div class="tab-panel" id="tab-pricing">
+  <div class="grid-2" style="margin-bottom:18px">
+    <div class="stat-card purple">
+      <div class="stat-label">Total Items</div>
+      <div class="stat-value" id="pl_totalItems">0</div>
+      <div class="stat-sub">priced items</div>
+    </div>
+    <div class="stat-card blue">
+      <div class="stat-label">Categories</div>
+      <div class="stat-value" id="pl_totalCats">0</div>
+      <div class="stat-sub">distinct categories</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">💰 Pricing List</div>
+      <div class="btn-group">
+        <button class="btn btn-primary btn-sm" onclick="openPriceModal()">+ Add Item</button>
+      </div>
+    </div>
+    <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <input type="text" placeholder="🔍 Search..." id="pl_search" oninput="renderPricing()" style="width:250px">
+      <select id="pl_catFilter" onchange="renderPricing()" style="width:auto">
+        <option value="">All Categories</option>
+      </select>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th>Item</th>
+            <th>Buy Price</th>
+            <th>Sell Price</th>
+            <th>Per (units)</th>
+            <th>Margin</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="pl_table"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODALS ═══ -->
+<!-- Stock Add/Edit Modal -->
+<div class="modal-overlay" id="modal-stock">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalStockTitle">Add Stock Item</div>
+      <button class="modal-close" onclick="closeModal('modal-stock')">×</button>
+    </div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>Item Name</label>
+      <input type="text" id="st_m_name" placeholder="e.g. Iron Ore">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Category</label>
+        <input type="text" id="st_m_category" placeholder="e.g. Ore">
+      </div>
+      <div class="form-group">
+        <label>Quantity</label>
+        <input type="number" id="st_m_qty" placeholder="0" min="0">
+      </div>
+    </div>
+    <div class="btn-group" style="margin-top:16px">
+      <button class="btn btn-primary" onclick="saveStockItem()">Save Item</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-stock')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Trade Modal -->
+<div class="modal-overlay" id="modal-trade">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Log Trade / Sale</div>
+      <button class="modal-close" onclick="closeModal('modal-trade')">×</button>
+    </div>
+    <div class="form-row" style="margin-bottom:12px">
+      <div class="form-group">
+        <label>Type</label>
+        <select id="tr_m_type">
+          <option value="buy">Buy (add stock)</option>
+          <option value="sell">Sell (remove stock)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Item</label>
+        <select id="tr_m_item"></select>
+      </div>
+    </div>
+    <div class="form-row" style="margin-bottom:12px">
+      <div class="form-group">
+        <label>Quantity</label>
+        <input type="number" id="tr_m_qty" placeholder="0" min="1">
+      </div>
+      <div class="form-group">
+        <label>Gold (G) — optional</label>
+        <input type="number" id="tr_m_gold" placeholder="0" min="0">
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>Note (optional)</label>
+      <input type="text" id="tr_m_note" placeholder="e.g. Sold to NPC vendor">
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="saveTrade()">Log Trade</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-trade')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Rent Modal -->
+<div class="modal-overlay" id="modal-rent">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Manage Rent</div>
+      <button class="modal-close" onclick="closeModal('modal-rent')">×</button>
+    </div>
+    <div class="form-row" style="margin-bottom:12px">
+      <div class="form-group">
+        <label>Weekly Rent Amount (G)</label>
+        <input type="number" id="rw_m_rentAmount" placeholder="0" min="0">
+      </div>
+      <div class="form-group">
+        <label>Current Reserve (G)</label>
+        <input type="number" id="rw_m_reserve" placeholder="0" min="0">
+      </div>
+    </div>
+    <div class="form-row" style="margin-bottom:12px">
+      <div class="form-group">
+        <label>Next Due Date</label>
+        <input type="date" id="rw_m_dueDate">
+      </div>
+      <div class="form-group">
+        <label>Add / Subtract (G)</label>
+        <input type="number" id="rw_m_adjust" placeholder="+/- amount">
+      </div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="saveRentSettings()">Save Rent Settings</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-rent')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Employee Modal -->
+<div class="modal-overlay" id="modal-employee">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalEmpTitle">Add Employee</div>
+      <button class="modal-close" onclick="closeModal('modal-employee')">×</button>
+    </div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>Employee Name</label>
+      <input type="text" id="emp_m_name" placeholder="e.g. Tharsten">
+    </div>
+    <div class="form-row" style="margin-bottom:12px">
+      <div class="form-group">
+        <label>Weekly Wage (G)</label>
+        <input type="number" id="emp_m_wage" placeholder="0" min="0">
+      </div>
+      <div class="form-group">
+        <label>Owes Company (G)</label>
+        <input type="number" id="emp_m_debt" placeholder="0" min="0">
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>Due Date</label>
+      <input type="date" id="emp_m_due">
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="saveEmployee()">Save Employee</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-employee')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Storage Unit Modal -->
+<div class="modal-overlay" id="modal-storage">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalStorageTitle">Edit Storage Unit</div>
+      <button class="modal-close" onclick="closeModal('modal-storage')">×</button>
+    </div>
+    <div class="form-row" style="margin-bottom:12px">
+      <div class="form-group">
+        <label>Unit Name / Number</label>
+        <input type="text" id="su_m_name" placeholder="e.g. Vault 1">
+      </div>
+      <div class="form-group">
+        <label>Tenant Name</label>
+        <input type="text" id="su_m_tenant" placeholder="Owner name">
+      </div>
+    </div>
+    <div class="form-row" style="margin-bottom:12px">
+      <div class="form-group">
+        <label>Weekly Rent (G)</label>
+        <input type="number" id="su_m_rent" placeholder="0" min="0">
+      </div>
+      <div class="form-group">
+        <label>Due Date</label>
+        <input type="date" id="su_m_due">
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>
+        <input type="checkbox" id="su_m_paid"> Rent Paid This Week
+      </label>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="saveStorageUnit()">Save Unit</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-storage')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Pricing Modal -->
+<div class="modal-overlay" id="modal-pricing">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalPriceTitle">Add Pricing Item</div>
+      <button class="modal-close" onclick="closeModal('modal-pricing')">×</button>
+    </div>
+    <div class="form-row" style="margin-bottom:12px">
+      <div class="form-group">
+        <label>Category</label>
+        <input type="text" id="pl_m_category" placeholder="e.g. Ore" list="pl_catList">
+        <datalist id="pl_catList"></datalist>
+      </div>
+      <div class="form-group">
+        <label>Item Name</label>
+        <input type="text" id="pl_m_item" placeholder="e.g. Iron Ore">
+      </div>
+    </div>
+    <div class="form-row" style="margin-bottom:12px">
+      <div class="form-group">
+        <label>Buy Price (G)</label>
+        <input type="number" id="pl_m_buyPrice" placeholder="0" min="0" step="0.01">
+      </div>
+      <div class="form-group">
+        <label>Sell Price (G)</label>
+        <input type="number" id="pl_m_sellPrice" placeholder="0" min="0" step="0.01">
+      </div>
+    </div>
+    <div class="form-row" style="margin-bottom:12px">
+      <div class="form-group">
+        <label>Buy Per (units)</label>
+        <input type="number" id="pl_m_buyPer" placeholder="1" min="1">
+      </div>
+      <div class="form-group">
+        <label>Sell Per (units)</label>
+        <input type="number" id="pl_m_sellPer" placeholder="1" min="1">
+      </div>
+    </div>
+    <div style="margin:12px 0;padding:12px;background:var(--bg4);border-radius:6px;font-size:13px;color:var(--text-dim)">
+      <strong>Preview:</strong> Buy <span id="pl_preview"></span>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="savePriceItem()">Save Pricing</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-pricing')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// DATA LAYER — localStorage persistence
+// ═══════════════════════════════════════════════
+const DB = {
+  get(key, def) {
+    try { return JSON.parse(localStorage.getItem('se_' + key)) ?? def; }
+    catch { return def; }
+  },
+  set(key, val) { localStorage.setItem('se_' + key, JSON.stringify(val)); }
+};
+
+// ═══════════════════════════════════════════════
+// TAB SWITCHING
+// ═══════════════════════════════════════════════
+function switchTab(id) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelector(`.tab-btn[onclick="switchTab('${id}')"]`).classList.add('active');
+  document.getElementById('tab-' + id).classList.add('active');
+  renderAll();
+}
+
+// ═══════════════════════════════════════════════
+// MODAL HELPERS
+// ═══════════════════════════════════════════════
+function openModal(id) { document.getElementById(id).classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+// ═══════════════════════════════════════════════
+// CLOCK
+// ═══════════════════════════════════════════════
+function updateClock() {
+  const d = new Date();
+  document.getElementById('clock').textContent = d.toLocaleString('en-US', {
+    weekday:'short', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'
+  });
+}
+setInterval(updateClock, 10000);
+updateClock();
+
+// ═══════════════════════════════════════════════
+// DATE HELPERS
+// ═══════════════════════════════════════════════
+function fmtDate(d) {
+  if (!d) return '—';
+  const date = new Date(d);
+  return date.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+}
+function todayStr() { return new Date().toISOString().split('T')[0]; }
+function addDays(d, n) { const r = new Date(d); r.setDate(r.getDate()+n); return r.toISOString().split('T')[0]; }
+function isPast(d) { return new Date(d) < new Date(new Date().toDateString()); }
+
+// ═══════════════════════════════════════════════
+// CATEGORY COLORS
+// ═══════════════════════════════════════════════
+const CAT_COLORS = [
+  '#7c5bf5','#5b9bf5','#34d399','#fbbf24','#f87171','#fb923c',
+  '#a78bfa','#38bdf8','#4ade80','#facc15','#fb7185','#f97316'
+];
+function catColor(cat) {
+  let h = 0;
+  for (let i = 0; i < cat.length; i++) h = ((h << 5) - h + cat.charCodeAt(i)) | 0;
+  return CAT_COLORS[Math.abs(h) % CAT_COLORS.length];
+}
+
+// ═══════════════════════════════════════════════
+// TAB 1 — STOCK MANAGEMENT
+// ═══════════════════════════════════════════════
+let stockItems = DB.get('stockItems', []);
+let tradeLog = DB.get('tradeLog', []);
+
+function saveStock() { DB.set('stockItems', stockItems); }
+function saveTrades() { DB.set('tradeLog', tradeLog); }
+
+function openStockModal(editId) {
+  document.getElementById('modalStockTitle').textContent = editId != null ? 'Edit Stock Item' : 'Add Stock Item';
+  if (editId != null) {
+    const it = stockItems.find(x => x.id === editId);
+    document.getElementById('st_m_name').value = it.name;
+    document.getElementById('st_m_category').value = it.category || '';
+    document.getElementById('st_m_qty').value = it.qty;
+  } else {
+    document.getElementById('st_m_name').value = '';
+    document.getElementById('st_m_category').value = '';
+    document.getElementById('st_m_qty').value = '';
+  }
+  document.getElementById('modal-stock').dataset.editId = editId != null ? editId : '';
+  openModal('modal-stock');
+}
+
+function saveStockItem() {
+  const name = document.getElementById('st_m_name').value.trim();
+  const category = document.getElementById('st_m_category').value.trim();
+  const qty = parseInt(document.getElementById('st_m_qty').value) || 0;
+  if (!name) return alert('Enter an item name');
+  const editId = document.getElementById('modal-stock').dataset.editId;
+  if (editId) {
+    const it = stockItems.find(x => x.id === editId);
+    if (it) { it.name = name; it.category = category; it.qty = qty; }
+  } else {
+    stockItems.push({ id: Date.now().toString(36), name, category, qty });
+  }
+  saveStock();
+  closeModal('modal-stock');
+  renderStock();
+}
+
+function deleteStockItem(id) {
+  if (!confirm('Delete this item?')) return;
+  stockItems = stockItems.filter(x => x.id !== id);
+  saveStock();
+  renderStock();
+}
+
+function openTradeModal() {
+  const sel = document.getElementById('tr_m_item');
+  sel.innerHTML = '<option value="">— Select Item —</option>';
+  stockItems.forEach(it => {
+    sel.innerHTML += `<option value="${it.id}">${it.name} (have: ${it.qty})</option>`;
+  });
+  document.getElementById('tr_m_type').value = 'buy';
+  document.getElementById('tr_m_qty').value = '';
+  document.getElementById('tr_m_gold').value = '';
+  document.getElementById('tr_m_note').value = '';
+  openModal('modal-trade');
+}
+
+function saveTrade() {
+  const type = document.getElementById('tr_m_type').value;
+  const itemId = document.getElementById('tr_m_item').value;
+  const qty = parseInt(document.getElementById('tr_m_qty').value) || 0;
+  const gold = parseFloat(document.getElementById('tr_m_gold').value) || 0;
+  const note = document.getElementById('tr_m_note').value.trim();
+  if (!itemId || qty < 1) return alert('Select an item and enter quantity');
+
+  const item = stockItems.find(x => x.id === itemId);
+  if (!item) return;
+
+  if (type === 'buy') item.qty += qty;
+  else {
+    item.qty = Math.max(0, item.qty - qty);
+  }
+  saveStock();
+
+  tradeLog.unshift({
+    id: Date.now().toString(36),
+    date: todayStr(),
+    type, itemName: item.name, itemId, qty, gold, note
+  });
+  if (tradeLog.length > 200) tradeLog = tradeLog.slice(0, 200);
+  saveTrades();
+
+  closeModal('modal-trade');
+  renderStock();
+}
+
+function deleteTrade(id) {
+  tradeLog = tradeLog.filter(x => x.id !== id);
+  saveTrades();
+  renderStock();
+}
+
+function renderStock() {
+  const search = (document.getElementById('st_search')?.value || '').toLowerCase();
+
+  // Stats
+  const totalQty = stockItems.reduce((s, x) => s + x.qty, 0);
+  const today = todayStr();
+  const todayTrades = tradeLog.filter(t => t.date === today);
+  const lowStock = stockItems.filter(x => x.qty <= 5).length;
+
+  document.getElementById('st_totalItems').textContent = stockItems.length;
+  document.getElementById('st_totalEntries').textContent = totalQty;
+  document.getElementById('st_tradesToday').textContent = todayTrades.length;
+  document.getElementById('st_tradesTodaySub').textContent = todayTrades.length + ' logged today';
+  document.getElementById('st_lowStock').textContent = lowStock;
+
+  // Stock table
+  const filtered = search ? stockItems.filter(x =>
+    x.name.toLowerCase().includes(search) || (x.category||'').toLowerCase().includes(search)
+  ) : stockItems;
+
+  const tbody = document.getElementById('st_stockTable');
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="4" class="empty-state"><div class="icon">📦</div>No stock items yet</td></tr>';
+  } else {
+    tbody.innerHTML = filtered.map(it => `
+      <tr>
+        <td><strong>${it.name}</strong></td>
+        <td><span class="cat-pill" style="background:${catColor(it.category)}22;color:${catColor(it.category)}">${it.category||'—'}</span></td>
+        <td><span class="currency" style="color:${it.qty <= 5 ? 'var(--red)' : 'var(--green)'}">${it.qty}</span></td>
+        <td>
+          <div class="action-btns">
+            <button class="btn btn-ghost btn-sm" onclick="openStockModal('${it.id}')">✏️</button>
+            <button class="btn btn-ghost btn-sm" onclick="deleteStockItem('${it.id}')">🗑️</button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  // Trade table
+  const trBody = document.getElementById('st_tradeTable');
+  if (!tradeLog.length) {
+    trBody.innerHTML = '<tr><td colspan="6" class="empty-state"><div class="icon">🔄</div>No trades logged</td></tr>';
+  } else {
+    trBody.innerHTML = tradeLog.slice(0, 50).map(t => `
+      <tr>
+        <td>${fmtDate(t.date)}</td>
+        <td><span class="status-tag ${t.type === 'buy' ? 'paid' : 'due'}">${t.type === 'buy' ? 'BUY' : 'SELL'}</span></td>
+        <td>${t.itemName}</td>
+        <td>${t.qty}</td>
+        <td>${t.gold ? t.gold + ' G' : '—'}</td>
+        <td>
+          <div class="action-btns">
+            <button class="btn btn-ghost btn-sm" onclick="deleteTrade('${t.id}')">🗑️</button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  }
+}
+
+// ═══════════════════════════════════════════════
+// TAB 2 — RENT & WAGES
+// ═══════════════════════════════════════════════
+let rentSettings = DB.get('rentSettings', {
+  weeklyRent: 0,
+  reserve: 0,
+  nextDue: addDays(todayStr(), 7),
+  lastPaid: null,
+  isPaid: false
+});
+let employees = DB.get('employees', []);
+
+function saveRent() { DB.set('rentSettings', rentSettings); }
+function saveEmps() { DB.set('employees', employees); }
+
+function openRentModal() {
+  document.getElementById('rw_m_rentAmount').value = rentSettings.weeklyRent || '';
+  document.getElementById('rw_m_reserve').value = rentSettings.reserve || '';
+  document.getElementById('rw_m_dueDate').value = rentSettings.nextDue || '';
+  document.getElementById('rw_m_adjust').value = '';
+  openModal('modal-rent');
+}
+
+function saveRentSettings() {
+  const amt = parseFloat(document.getElementById('rw_m_rentAmount').value) || 0;
+  const res = parseFloat(document.getElementById('rw_m_reserve').value) || 0;
+  const due = document.getElementById('rw_m_dueDate').value;
+  const adj = parseFloat(document.getElementById('rw_m_adjust').value) || 0;
+
+  rentSettings.weeklyRent = amt;
+  rentSettings.reserve = Math.max(0, res + adj);
+  if (due) rentSettings.nextDue = due;
+  saveRent();
+  closeModal('modal-rent');
+  renderRentWages();
+}
+
+function toggleRentPaid() {
+  if (rentSettings.isPaid) {
+    rentSettings.isPaid = false;
+  } else {
+    rentSettings.isPaid = true;
+    rentSettings.lastPaid = todayStr();
+    rentSettings.reserve = Math.max(0, rentSettings.reserve - rentSettings.weeklyRent);
+    rentSettings.nextDue = addDays(rentSettings.nextDue || todayStr(), 7);
+  }
+  saveRent();
+  renderRentWages();
+}
+
+function openEmployeeModal(editId) {
+  document.getElementById('modalEmpTitle').textContent = editId != null ? 'Edit Employee' : 'Add Employee';
+  if (editId != null) {
+    const e = employees.find(x => x.id === editId);
+    document.getElementById('emp_m_name').value = e.name;
+    document.getElementById('emp_m_wage').value = e.wage;
+    document.getElementById('emp_m_debt').value = e.debt || 0;
+    document.getElementById('emp_m_due').value = e.dueDate || '';
+  } else {
+    document.getElementById('emp_m_name').value = '';
+    document.getElementById('emp_m_wage').value = '';
+    document.getElementById('emp_m_debt').value = '';
+    document.getElementById('emp_m_due').value = addDays(todayStr(), 7);
+  }
+  document.getElementById('modal-employee').dataset.editId = editId != null ? editId : '';
+  openModal('modal-employee');
+}
+
+function saveEmployee() {
+  const name = document.getElementById('emp_m_name').value.trim();
+  const wage = parseFloat(document.getElementById('emp_m_wage').value) || 0;
+  const debt = parseFloat(document.getElementById('emp_m_debt').value) || 0;
+  const due = document.getElementById('emp_m_due').value;
+  if (!name) return alert('Enter employee name');
+
+  const editId = document.getElementById('modal-employee').dataset.editId;
+  if (editId) {
+    const e = employees.find(x => x.id === editId);
+    if (e) { e.name = name; e.wage = wage; e.debt = debt; e.dueDate = due; e.paid = false; }
+  } else {
+    employees.push({ id: Date.now().toString(36), name, wage, debt, dueDate: due, paid: false });
+  }
+  saveEmps();
+  closeModal('modal-employee');
+  renderRentWages();
+}
+
+function deleteEmployee(id) {
+  if (!confirm('Remove this employee?')) return;
+  employees = employees.filter(x => x.id !== id);
+  saveEmps();
+  renderRentWages();
+}
+
+function toggleWagePaid(id) {
+  const e = employees.find(x => x.id === id);
+  if (e) { e.paid = !e.paid; saveEmps(); renderRentWages(); }
+}
+
+function markAllWagesPaid() {
+  employees.forEach(e => e.paid = true);
+  saveEmps();
+  renderRentWages();
+}
+
+function resetWeeklyWages() {
+  if (!confirm('Reset all wages to unpaid for the new week?')) return;
+  employees.forEach(e => { e.paid = false; e.dueDate = addDays(e.dueDate || todayStr(), 7); });
+  saveEmps();
+  renderRentWages();
+}
+
+function renderRentWages() {
+  // Rent display
+  document.getElementById('rw_weeklyRent').textContent = rentSettings.weeklyRent + ' G';
+  document.getElementById('rw_nextDue').textContent = fmtDate(rentSettings.nextDue);
+  document.getElementById('rw_savedAmount').textContent = rentSettings.reserve + ' G';
+
+  const pct = rentSettings.weeklyRent > 0
+    ? Math.min(100, (rentSettings.reserve / rentSettings.weeklyRent) * 100) : 0;
+  document.getElementById('rw_rentProgress').style.width = pct + '%';
+
+  const overdue = rentSettings.nextDue && isPast(rentSettings.nextDue) && !rentSettings.isPaid;
+  const statusBadge = document.getElementById('rw_rentStatusBadge');
+  const statusText = document.getElementById('rw_statusText');
+
+  if (rentSettings.isPaid && !overdue) {
+    statusBadge.textContent = 'PAID';
+    statusBadge.className = 'card-badge badge-green';
+    statusText.textContent = 'Paid';
+    statusText.style.color = 'var(--green)';
+  } else if (overdue) {
+    statusBadge.textContent = 'OVERDUE';
+    statusBadge.className = 'card-badge badge-red';
+    statusText.textContent = 'OVERDUE';
+    statusText.style.color = 'var(--red)';
+  } else {
+    statusBadge.textContent = 'DUE';
+    statusBadge.className = 'card-badge badge-yellow';
+    statusText.textContent = 'Due Soon';
+    statusText.style.color = 'var(--yellow)';
+  }
+
+  document.getElementById('rw_rentReserve').textContent = rentSettings.reserve + ' G';
+
+  // Employee stats
+  const paidWages = employees.filter(e => e.paid).reduce((s, e) => s + e.wage, 0);
+  const owedWages = employees.filter(e => !e.paid).reduce((s, e) => s + e.wage, 0);
+  document.getElementById('rw_wagesPaidValue').textContent = paidWages + ' G';
+  document.getElementById('rw_wagesPaidSub').textContent = employees.filter(e=>e.paid).length + '/' + employees.length + ' paid';
+  document.getElementById('rw_wagesOwedValue').textContent = owedWages + ' G';
+  document.getElementById('rw_wagesOwedSub').textContent = employees.filter(e=>!e.paid).length + ' pending';
+  document.getElementById('rw_empCount').textContent = employees.length + ' employees';
+
+  // Employee table
+  const tbody = document.getElementById('rw_empTable');
+  if (!employees.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-state"><div class="icon">👷</div>No employees added</td></tr>';
+  } else {
+    tbody.innerHTML = employees.map(e => {
+      const overdue = e.dueDate && isPast(e.dueDate) && !e.paid;
+      return `
+        <tr>
+          <td><strong>${e.name}</strong></td>
+          <td><span class="currency">${e.wage} G</span>/wk</td>
+          <td style="color:${e.debt > 0 ? 'var(--red)' : ''}">${e.debt > 0 ? e.debt + ' G' : '—'}</td>
+          <td style="color:${overdue ? 'var(--red)' : ''}">${fmtDate(e.dueDate)} ${overdue ? '⚠' : ''}</td>
+          <td>
+            <span class="status-tag ${e.paid ? 'paid' : 'due'}" style="cursor:pointer" onclick="toggleWagePaid('${e.id}')">
+              ${e.paid ? '✓ Paid' : '○ Due'}
+            </span>
+          </td>
+          <td>
+            <div class="action-btns">
+              <button class="btn btn-ghost btn-sm" onclick="openEmployeeModal('${e.id}')">✏️</button>
+              <button class="btn btn-ghost btn-sm" onclick="deleteEmployee('${e.id}')">🗑️</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+}
+
+// ═══════════════════════════════════════════════
+// TAB 3 — STORAGE UNITS
+// ═══════════════════════════════════════════════
+let storageUnits = DB.get('storageUnits', []);
+let storageHistory = DB.get('storageHistory', []);
+
+function saveStorage() { DB.set('storageUnits', storageUnits); }
+function saveStorageHistory() { DB.set('storageHistory', storageHistory); }
+
+// Init 8 units if empty
+if (!storageUnits.length) {
+  for (let i = 1; i <= 8; i++) {
+    storageUnits.push({
+      id: i,
+      name: 'Unit ' + i,
+      tenant: '',
+      weeklyRent: 0,
+      dueDate: addDays(todayStr(), 7),
+      paid: false
+    });
+  }
+  saveStorage();
+}
+
+function openStorageModal(unitId) {
+  const u = storageUnits.find(x => x.id === unitId);
+  document.getElementById('modalStorageTitle').textContent = `Edit ${u.name}`;
+  document.getElementById('su_m_name').value = u.name;
+  document.getElementById('su_m_tenant').value = u.tenant;
+  document.getElementById('su_m_rent').value = u.weeklyRent || '';
+  document.getElementById('su_m_due').value = u.dueDate || '';
+  document.getElementById('su_m_paid').checked = u.paid;
+  document.getElementById('modal-storage').dataset.unitId = unitId;
+  openModal('modal-storage');
+}
+
+function saveStorageUnit() {
+  const id = parseInt(document.getElementById('modal-storage').dataset.unitId);
+  const u = storageUnits.find(x => x.id === id);
+  if (!u) return;
+  u.name = document.getElementById('su_m_name').value.trim() || 'Unit ' + id;
+  u.tenant = document.getElementById('su_m_tenant').value.trim();
+  u.weeklyRent = parseFloat(document.getElementById('su_m_rent').value) || 0;
+  u.dueDate = document.getElementById('su_m_due').value || addDays(todayStr(), 7);
+  u.paid = document.getElementById('su_m_paid').checked;
+  saveStorage();
+  closeModal('modal-storage');
+  renderStorage();
+}
+
+function toggleStoragePaid(id) {
+  const u = storageUnits.find(x => x.id === id);
+  if (!u) return;
+  u.paid = !u.paid;
+  if (u.paid) {
+    storageHistory.unshift({
+      date: todayStr(), unitName: u.name, tenant: u.tenant,
+      amount: u.weeklyRent, status: 'Paid'
+    });
+  }
+  saveStorage();
+  saveStorageHistory();
+  renderStorage();
+}
+
+function su_advanceWeek() {
+  if (!confirm('Advance all units by one week? Unpaid units will be marked overdue.')) return;
+  storageUnits.forEach(u => {
+    if (u.paid) {
+      u.paid = false;
+      u.dueDate = addDays(u.dueDate || todayStr(), 7);
+    } else {
+      // Was already unpaid — mark overdue
+      storageHistory.unshift({
+        date: todayStr(), unitName: u.name, tenant: u.tenant,
+        amount: u.weeklyRent, status: 'OVERDUE'
+      });
+    }
+  });
+  saveStorage();
+  saveStorageHistory();
+  renderStorage();
+}
+
+function su_checkOverdue() {
+  let count = 0;
+  storageUnits.forEach(u => {
+    if (!u.paid && u.dueDate && isPast(u.dueDate)) {
+      count++;
+      storageHistory.unshift({
+        date: todayStr(), unitName: u.name, tenant: u.tenant,
+        amount: u.weeklyRent, status: 'OVERDUE'
+      });
+    }
+  });
+  saveStorageHistory();
+  renderStorage();
+  if (count) alert(count + ' overdue unit(s) found and logged.');
+  else alert('No overdue units.');
+}
+
+function renderStorage() {
+  const paid = storageUnits.filter(u => u.paid).length;
+  const unpaid = storageUnits.length - paid;
+  const weeklyIncome = storageUnits.reduce((s, u) => s + u.weeklyRent, 0);
+  const outstanding = storageUnits.filter(u => !u.paid).reduce((s, u) => s + u.weeklyRent, 0);
+
+  document.getElementById('su_paidCount').textContent = paid + '/8';
+  document.getElementById('su_unpaidCount').textContent = unpaid;
+  document.getElementById('su_weeklyIncome').textContent = weeklyIncome + ' G';
+  document.getElementById('su_outstanding').textContent = outstanding + ' G';
+
+  const grid = document.getElementById('su_grid');
+  grid.innerHTML = storageUnits.map(u => {
+    const overdue = !u.paid && u.dueDate && isPast(u.dueDate);
+    return `
+      <div class="storage-unit ${overdue ? 'unpaid' : ''}" onclick="openStorageModal(${u.id})" style="cursor:pointer">
+        <div class="storage-unit-header">
+          <div class="storage-unit-num">${u.name}</div>
+          <span class="status-tag ${u.paid ? 'paid' : overdue ? 'due' : 'pending'}">
+            ${u.paid ? '✓ Paid' : overdue ? '⚠ Overdue' : '○ Due'}
+          </span>
+        </div>
+        <div class="storage-unit-body">
+          <div class="storage-unit-row">
+            <span class="label">Tenant</span>
+            <span class="value">${u.tenant || '—'}</span>
+          </div>
+          <div class="storage-unit-row">
+            <span class="label">Weekly Rent</span>
+            <span class="value currency">${u.weeklyRent} G</span>
+          </div>
+          <div class="storage-unit-row">
+            <span class="label">Due</span>
+            <span class="value" style="color:${overdue?'var(--red)':''}">${fmtDate(u.dueDate)}</span>
+          </div>
+        </div>
+        <div style="margin-top:12px">
+          <button class="btn ${u.paid ? 'btn-ghost' : 'btn-green'} btn-sm" style="width:100%"
+            onclick="event.stopPropagation();toggleStoragePaid(${u.id})">
+            ${u.paid ? 'Mark Unpaid' : 'Mark Paid'}
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // History
+  const hist = document.getElementById('su_history');
+  if (!storageHistory.length) {
+    hist.innerHTML = '<tr><td colspan="5" class="empty-state"><div class="icon">📋</div>No history yet</td></tr>';
+  } else {
+    hist.innerHTML = storageHistory.slice(0, 50).map(h => `
+      <tr>
+        <td>${fmtDate(h.date)}</td>
+        <td>${h.unitName}</td>
+        <td>${h.tenant || '—'}</td>
+        <td>${h.amount} G</td>
+        <td><span class="status-tag ${h.status === 'Paid' ? 'paid' : 'due'}">${h.status}</span></td>
+      </tr>
+    `).join('');
+  }
+}
+
+// ═══════════════════════════════════════════════
+// TAB 4 — PRICING LIST
+// ═══════════════════════════════════════════════
+let pricingItems = DB.get('pricingItems', []);
+
+function savePricing() { DB.set('pricingItems', pricingItems); }
+
+function openPriceModal(editId) {
+  document.getElementById('modalPriceTitle').textContent = editId != null ? 'Edit Pricing' : 'Add Pricing Item';
+
+  // Populate category datalist
+  const cats = [...new Set(pricingItems.map(x => x.category).filter(Boolean))];
+  document.getElementById('pl_catList').innerHTML = cats.map(c => `<option value="${c}">`).join('');
+
+  if (editId != null) {
+    const it = pricingItems.find(x => x.id === editId);
+    document.getElementById('pl_m_category').value = it.category || '';
+    document.getElementById('pl_m_item').value = it.item || '';
+    document.getElementById('pl_m_buyPrice').value = it.buyPrice ?? '';
+    document.getElementById('pl_m_sellPrice').value = it.sellPrice ?? '';
+    document.getElementById('pl_m_buyPer').value = it.buyPer || 1;
+    document.getElementById('pl_m_sellPer').value = it.sellPer || 1;
+  } else {
+    document.getElementById('pl_m_category').value = '';
+    document.getElementById('pl_m_item').value = '';
+    document.getElementById('pl_m_buyPrice').value = '';
+    document.getElementById('pl_m_sellPrice').value = '';
+    document.getElementById('pl_m_buyPer').value = 1;
+    document.getElementById('pl_m_sellPer').value = 1;
+  }
+  document.getElementById('modal-pricing').dataset.editId = editId != null ? editId : '';
+  updatePricePreview();
+  openModal('modal-pricing');
+}
+
+function updatePricePreview() {
+  const bp = parseFloat(document.getElementById('pl_m_buyPrice').value) || 0;
+  const sp = parseFloat(document.getElementById('pl_m_sellPrice').value) || 0;
+  const bPer = parseInt(document.getElementById('pl_m_buyPer').value) || 1;
+  const sPer = parseInt(document.getElementById('pl_m_sellPer').value) || 1;
+  const item = document.getElementById('pl_m_item').value || 'item';
+  const cat = document.getElementById('pl_m_category').value || 'category';
+
+  let html = '';
+  if (bp) html += `<strong>Buy:</strong> ${bPer} × ${item} for ${bp} G. `;
+  if (sp) html += `<strong>Sell:</strong> ${sPer} × ${item} for ${sp} G. `;
+  if (bp && sp) {
+    const margin = (sp / sPer - bp / bPer);
+    html += ` <strong>Margin:</strong> <span style="color:${margin >= 0 ? 'var(--green)' : 'var(--red)'}">${margin >= 0 ? '+' : ''}${margin.toFixed(2)} G/unit</span>`;
+  }
+  document.getElementById('pl_preview').innerHTML = html || 'Enter prices to see preview';
+}
+
+// Live preview listeners
+['pl_m_buyPrice','pl_m_sellPrice','pl_m_buyPer','pl_m_sellPer','pl_m_item','pl_m_category'].forEach(id => {
+  document.getElementById(id)?.addEventListener('input', updatePricePreview);
+});
+
+function savePriceItem() {
+  const category = document.getElementById('pl_m_category').value.trim();
+  const item = document.getElementById('pl_m_item').value.trim();
+  const buyPrice = parseFloat(document.getElementById('pl_m_buyPrice').value) || 0;
+  const sellPrice = parseFloat(document.getElementById('pl_m_sellPrice').value) || 0;
+  const buyPer = parseInt(document.getElementById('pl_m_buyPer').value) || 1;
+  const sellPer = parseInt(document.getElementById('pl_m_sellPer').value) || 1;
+  if (!item) return alert('Enter an item name');
+
+  const editId = document.getElementById('modal-pricing').dataset.editId;
+  if (editId) {
+    const it = pricingItems.find(x => x.id === editId);
+    if (it) { it.category = category; it.item = item; it.buyPrice = buyPrice; it.sellPrice = sellPrice; it.buyPer = buyPer; it.sellPer = sellPer; }
+  } else {
+    pricingItems.push({ id: Date.now().toString(36), category, item, buyPrice, sellPrice, buyPer, sellPer });
+  }
+  savePricing();
+  closeModal('modal-pricing');
+  renderPricing();
+}
+
+function deletePriceItem(id) {
+  if (!confirm('Delete this pricing item?')) return;
+  pricingItems = pricingItems.filter(x => x.id !== id);
+  savePricing();
+  renderPricing();
+}
+
+function renderPricing() {
+  const search = (document.getElementById('pl_search')?.value || '').toLowerCase();
+  const catFilter = document.getElementById('pl_catFilter')?.value || '';
+
+  // Stats
+  const cats = [...new Set(pricingItems.map(x => x.category).filter(Boolean))];
+  document.getElementById('pl_totalItems').textContent = pricingItems.length;
+  document.getElementById('pl_totalCats').textContent = cats.length;
+
+  // Category filter
+  const catSel = document.getElementById('pl_catFilter');
+  const curVal = catSel.value;
+  catSel.innerHTML = '<option value="">All Categories</option>' +
+    cats.map(c => `<option value="${c}" ${c === curVal ? 'selected' : ''}>${c}</option>`).join('');
+
+  // Filter
+  let filtered = pricingItems;
+  if (catFilter) filtered = filtered.filter(x => x.category === catFilter);
+  if (search) filtered = filtered.filter(x =>
+    x.item.toLowerCase().includes(search) || (x.category||'').toLowerCase().includes(search)
+  );
+
+  // Group by category
+  const grouped = {};
+  filtered.forEach(x => {
+    const c = x.category || 'Uncategorized';
+    if (!grouped[c]) grouped[c] = [];
+    grouped[c].push(x);
+  });
+
+  const tbody = document.getElementById('pl_table');
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="icon">💰</div>No pricing items yet</td></tr>';
+  } else {
+    let html = '';
+    Object.keys(grouped).sort().forEach(cat => {
+      grouped[cat].forEach(it => {
+        const margin = it.buyPer > 0 && it.sellPer > 0 && it.buyPrice > 0 && it.sellPrice > 0
+          ? (it.sellPrice / it.sellPer - it.buyPrice / it.buyPer) : null;
+        html += `
+          <tr>
+            <td><span class="cat-pill" style="background:${catColor(cat)}22;color:${catColor(cat)}">${cat}</span></td>
+            <td><strong>${it.item}</strong></td>
+            <td>${it.buyPrice ? it.buyPrice + ' G' : '—'}</td>
+            <td>${it.sellPrice ? it.sellPrice + ' G' : '—'}</td>
+            <td>Buy: ${it.buyPer} / Sell: ${it.sellPer}</td>
+            <td style="color:${margin > 0 ? 'var(--green)' : margin < 0 ? 'var(--red)' : ''}">
+              ${margin != null ? (margin >= 0 ? '+' : '') + margin.toFixed(2) + ' G' : '—'}
+            </td>
+            <td>
+              <div class="action-btns">
+                <button class="btn btn-ghost btn-sm" onclick="openPriceModal('${it.id}')">✏️</button>
+                <button class="btn btn-ghost btn-sm" onclick="deletePriceItem('${it.id}')">🗑️</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      });
+    });
+    tbody.innerHTML = html;
+  }
+}
+
+// ═══════════════════════════════════════════════
+// MASTER RENDER
+// ═══════════════════════════════════════════════
+function renderAll() {
+  renderStock();
+  renderRentWages();
+  renderStorage();
+  renderPricing();
+}
+
+// Init
+// ═══════════════════════════════════════════════
+// LOGIN AUTH
+// ═══════════════════════════════════════════════
+const LOGIN_PASSWORD = 'Somewhere2026';
+const LOGIN_SESSION_KEY = 'se_session';
+let loginAttempts = 0;
+let loginLocked = false;
+let loginLockTimer = null;
+
+function isLoggedIn() {
+  return sessionStorage.getItem(LOGIN_SESSION_KEY) === '1';
+}
+
+function attemptLogin() {
+  if (loginLocked) {
+    document.getElementById('loginError').textContent = 'Too many attempts. Wait 30s.';
+    return;
+  }
+  const input = document.getElementById('loginPassword').value;
+  if (input === LOGIN_PASSWORD) {
+    sessionStorage.setItem(LOGIN_SESSION_KEY, '1');
+    document.getElementById('loginOverlay').classList.add('hidden');
+    renderAll();
+  } else {
+    loginAttempts++;
+    const card = document.getElementById('loginCard');
+    card.classList.remove('login-shake');
+    void card.offsetWidth; // reflow
+    card.classList.add('login-shake');
+    document.getElementById('loginError').textContent = 'Incorrect password. Try again.';
+    document.getElementById('loginPassword').value = '';
+    document.getElementById('loginPassword').focus();
+
+    if (loginAttempts >= 5) {
+      loginLocked = true;
+      document.getElementById('loginError').textContent = 'Too many attempts. Locked for 30s.';
+      loginLockTimer = setTimeout(() => {
+        loginLocked = false;
+        loginAttempts = 0;
+        document.getElementById('loginError').textContent = '';
+      }, 30000);
+    }
+  }
+}
+
+function toggleLoginVisibility() {
+  const inp = document.getElementById('loginPassword');
+  const btn = document.getElementById('loginToggleVis');
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    btn.textContent = '🙈';
+  } else {
+    inp.type = 'password';
+    btn.textContent = '👁️';
+  }
+}
+
+// Enter key submits login
+document.getElementById('loginPassword')?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') attemptLogin();
+});
+
+// Gate: only init if logged in
+if (isLoggedIn()) {
+  document.getElementById('loginOverlay').classList.add('hidden');
+  renderAll();
+}
+
+// ═══════════════════════════════════════════════
+// CALCULATOR
+// ═══════════════════════════════════════════════
+let calcExpression = '';
+let calcResult = '0';
+let calcMemory = 0;
+let calcHistory = DB.get('calcHistory', []);
+let calcJustEvaluated = false;
+let calcMode = 'basic'; // basic, trade
+
+const calcEl = {
+  expr: () => document.getElementById('calc-expression'),
+  res: () => document.getElementById('calc-result'),
+  pop: () => document.getElementById('calc-popout'),
+  toggle: () => document.getElementById('calc-toggle'),
+  hist: () => document.getElementById('calc-history'),
+};
+
+function calcToggle() {
+  const pop = calcEl.pop();
+  const btn = calcEl.toggle();
+  pop.classList.toggle('show');
+  btn.classList.toggle('open');
+  if (pop.classList.contains('show')) calcRenderHistory();
+}
+
+function calcClose() {
+  calcEl.pop().classList.remove('show');
+  calcEl.toggle().classList.remove('open');
+}
+
+function calcInput(v) {
+  if (v === 'C') {
+    calcExpression = '';
+    calcResult = '0';
+    calcJustEvaluated = false;
+    calcRender();
+    return;
+  }
+  if (v === '⌫') {
+    calcExpression = calcExpression.slice(0, -1);
+    calcJustEvaluated = false;
+    calcRender();
+    return;
+  }
+  if (v === '=') {
+    calcEvaluate();
+    return;
+  }
+  if (v === '±') {
+    if (calcExpression.startsWith('-')) calcExpression = calcExpression.slice(1);
+    else if (calcExpression && calcExpression !== '0') calcExpression = '-' + calcExpression;
+    calcRender();
+    return;
+  }
+  if (['+','-','×','÷','*','/'].includes(v)) {
+    // Normalize
+    if (v === '*') v = '×';
+    if (v === '/') v = '÷';
+    if (calcJustEvaluated) {
+      calcExpression = calcResult + ' ' + v + ' ';
+      calcJustEvaluated = false;
+    } else {
+      // Prevent double operators
+      const last = calcExpression.trim().slice(-1);
+      if (['+','-','×','÷'].includes(last)) {
+        calcExpression = calcExpression.trim().slice(0, -1) + ' ' + v + ' ';
+      } else {
+        calcExpression += ' ' + v + ' ';
+      }
+    }
+    calcRender();
+    return;
+  }
+  // Number or dot
+  if (calcJustEvaluated) {
+    calcExpression = v;
+    calcJustEvaluated = false;
+  } else {
+    calcExpression += v;
+  }
+  calcRender();
+}
+
+function calcEvaluate() {
+  if (!calcExpression) return;
+  try {
+    // Replace display operators with JS operators
+    const expr = calcExpression.replace(/×/g, '*').replace(/÷/g, '/').replace(/[^0-9+\-*/.() ]/g, '');
+    // Safe eval using Function
+    const result = new Function('return (' + expr + ')')();
+    if (!isFinite(result)) { calcResult = 'Error'; }
+    else {
+      calcResult = parseFloat(result.toFixed(10)).toString();
+      // Log to history
+      calcHistory.unshift({ expr: calcExpression, val: calcResult });
+      if (calcHistory.length > 30) calcHistory = calcHistory.slice(0, 30);
+      DB.set('calcHistory', calcHistory);
+      calcRenderHistory();
+    }
+    calcJustEvaluated = true;
+  } catch {
+    calcResult = 'Error';
+    calcJustEvaluated = true;
+  }
+  calcRender();
+}
+
+function calcRender() {
+  calcEl.expr().textContent = calcExpression || '\u00A0';
+  calcEl.res().textContent = calcResult;
+}
+
+function calcRenderHistory() {
+  const el = calcEl.hist();
+  if (!calcHistory.length) {
+    el.innerHTML = '<div style="padding:12px 16px;font-size:11px;color:var(--text-dim);text-align:center">No history yet</div>';
+    return;
+  }
+  el.innerHTML = calcHistory.map((h, i) => `
+    <div class="calc-history-item" onclick="calcUseHistory(${i})">
+      <span class="calc-history-expr">${h.expr}</span>
+      <span class="calc-history-val">= ${h.val}</span>
+    </div>
+  `).join('');
+}
+
+function calcUseHistory(i) {
+  calcExpression = calcHistory[i].val;
+  calcResult = calcHistory[i].val;
+  calcJustEvaluated = true;
+  calcRender();
+}
+
+function calcMemoryOp(op) {
+  const n = parseFloat(calcResult) || 0;
+  if (op === 'MC') calcMemory = 0;
+  else if (op === 'M+') calcMemory += n;
+  else if (op === 'M-') calcMemory -= n;
+  else if (op === 'MR') {
+    calcExpression = calcMemory.toString();
+    calcResult = calcMemory.toString();
+    calcJustEvaluated = true;
+    calcRender();
+  }
+}
+
+function calcSetMode(m) {
+  calcMode = m;
+  document.querySelectorAll('.calc-mode-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('calc-mode-' + m).classList.add('active');
+  calcRenderButtons();
+}
+
+function calcRenderButtons() {
+  const container = document.getElementById('calc-buttons-grid');
+  if (calcMode === 'basic') {
+    container.innerHTML = `
+      <button class="calc-btn clear" onclick="calcInput('C')">C</button>
+      <button class="calc-btn" onclick="calcInput('(')">(</button>
+      <button class="calc-btn" onclick="calcInput(')')">)</button>
+      <button class="calc-btn" onclick="calcInput('⌫')">⌫</button>
+      <button class="calc-btn op" onclick="calcInput('÷')">÷</button>
+      <button class="calc-btn" onclick="calcInput('7')">7</button>
+      <button class="calc-btn" onclick="calcInput('8')">8</button>
+      <button class="calc-btn" onclick="calcInput('9')">9</button>
+      <button class="calc-btn op" onclick="calcInput('×')">×</button>
+      <button class="calc-btn op" onclick="calcInput('-')">−</button>
+      <button class="calc-btn" onclick="calcInput('4')">4</button>
+      <button class="calc-btn" onclick="calcInput('5')">5</button>
+      <button class="calc-btn" onclick="calcInput('6')">6</button>
+      <button class="calc-btn op" onclick="calcInput('+')">+</button>
+      <button class="calc-btn op" onclick="calcInput('±')">±</button>
+      <button class="calc-btn" onclick="calcInput('1')">1</button>
+      <button class="calc-btn" onclick="calcInput('2')">2</button>
+      <button class="calc-btn" onclick="calcInput('3')">3</button>
+      <button class="calc-btn" onclick="calcInput('.')">.</button>
+      <button class="calc-btn equals" onclick="calcInput('=')">=</button>
+      <button class="calc-btn wide" onclick="calcInput('0')">0</button>
+    `;
+  } else {
+    // Trade mode — quick gold calculations
+    container.innerHTML = `
+      <button class="calc-btn clear" onclick="calcInput('C')">C</button>
+      <button class="calc-btn" onclick="calcInput('⌫')">⌫</button>
+      <button class="calc-btn op" onclick="calcInput('×')">×</button>
+      <button class="calc-btn op" onclick="calcInput('÷')">÷</button>
+      <button class="calc-btn op" onclick="calcInput('+')">+</button>
+      <button class="calc-btn" onclick="calcInput('7')">7</button>
+      <button class="calc-btn" onclick="calcInput('8')">8</button>
+      <button class="calc-btn" onclick="calcInput('9')">9</button>
+      <button class="calc-btn op" onclick="calcInput('-')">−</button>
+      <button class="calc-btn op" onclick="calcInput('±')">±</button>
+      <button class="calc-btn" onclick="calcInput('4')">4</button>
+      <button class="calc-btn" onclick="calcInput('5')">5</button>
+      <button class="calc-btn" onclick="calcInput('6')">6</button>
+      <button class="calc-btn" onclick="calcInput('(')">(</button>
+      <button class="calc-btn" onclick="calcInput(')')">)</button>
+      <button class="calc-btn" onclick="calcInput('1')">1</button>
+      <button class="calc-btn" onclick="calcInput('2')">2</button>
+      <button class="calc-btn" onclick="calcInput('3')">3</button>
+      <button class="calc-btn" onclick="calcInput('.')">.</button>
+      <button class="calc-btn equals" onclick="calcInput('=')">=</button>
+      <button class="calc-btn wide" onclick="calcInput('0')">0</button>
+    `;
+  }
+}
+
+// Keyboard support
+document.addEventListener('keydown', (e) => {
+  if (!calcEl.pop().classList.contains('show')) return;
+  if (e.key >= '0' && e.key <= '9') calcInput(e.key);
+  else if (e.key === '.') calcInput('.');
+  else if (e.key === '+') calcInput('+');
+  else if (e.key === '-') calcInput('-');
+  else if (e.key === '*') calcInput('×');
+  else if (e.key === '/') { e.preventDefault(); calcInput('÷'); }
+  else if (e.key === 'Enter' || e.key === '=') calcInput('=');
+  else if (e.key === 'Backspace') calcInput('⌫');
+  else if (e.key === 'Escape') { calcInput('C'); calcClose(); }
+  else if (e.key === '(') calcInput('(');
+  else if (e.key === ')') calcInput(')');
+});
+</script>
+
+<!-- ═══ CALCULATOR TOGGLE BUTTON ═══ -->
+<button class="calc-toggle" id="calc-toggle" onclick="calcToggle()">🧮</button>
+
+<!-- ═══ CALCULATOR POPOUT ═══ -->
+<div class="calc-popout" id="calc-popout">
+  <div class="calc-header">
+    <span>🧮 Calculator</span>
+    <button onclick="calcClose()">×</button>
+  </div>
+
+  <!-- Display -->
+  <div class="calc-display">
+    <div class="calc-expression" id="calc-expression">&nbsp;</div>
+    <div class="calc-result" id="calc-result">0</div>
+  </div>
+
+  <!-- Mode Bar -->
+  <div class="calc-mode-bar">
+    <button class="calc-mode-btn active" id="calc-mode-basic" onclick="calcSetMode('basic')">Basic</button>
+    <button class="calc-mode-btn" id="calc-mode-trade" onclick="calcSetMode('trade')">Trade</button>
+  </div>
+
+  <!-- Memory Bar -->
+  <div class="calc-memory-bar">
+    <button class="calc-mbtn" onclick="calcMemoryOp('MC')">MC</button>
+    <button class="calc-mbtn" onclick="calcMemoryOp('MR')">MR</button>
+    <button class="calc-mbtn" onclick="calcMemoryOp('M+')">M+</button>
+    <button class="calc-mbtn" onclick="calcMemoryOp('M-')">M−</button>
+  </div>
+
+  <!-- Buttons Grid -->
+  <div class="calc-buttons" id="calc-buttons-grid"></div>
+
+  <!-- History -->
+  <div class="calc-history" id="calc-history"></div>
+</div>
+
+<script>
+// Init calculator buttons
+calcRenderButtons();
+</script>
+
+</body>
+</html>
