@@ -7,6 +7,9 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>Somewhere Elsweyr — Ledger</title>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <style>
   :root {
     --bg: #0f1117;
@@ -725,9 +728,9 @@
     </div>
   </div>
   <div style="display:flex;align-items:center;gap:16px">
-    <div id="storageStatus" style="font-size:11px;display:flex;align-items:center;gap:5px;color:var(--text-dim)">
-      <span class="status-dot" id="storageDot"></span>
-      <span id="storageLabel">Checking storage…</span>
+    <div id="syncStatus" style="font-size:11px;display:flex;align-items:center;gap:5px;color:var(--text-dim)">
+      <span class="status-dot" id="syncDot"></span>
+      <span id="syncLabel">Connecting…</span>
     </div>
     <div class="topbar-time" id="clock"></div>
   </div>
@@ -1247,27 +1250,105 @@
 
 <script>
 // ═══════════════════════════════════════════════
-// DATA LAYER — localStorage persistence
+// FIREBASE CONFIG
 // ═══════════════════════════════════════════════
-let dbError = null;
-
-const DB = {
-  get(key, def) {
-    try { return JSON.parse(localStorage.getItem('se_' + key)) ?? def; }
-    catch(e) { console.warn('DB.get error:', e); return def; }
-  },
-  set(key, val) {
-    try {
-      localStorage.setItem('se_' + key, JSON.stringify(val));
-      dbError = null;
-      showSaveIndicator();
-    } catch(e) {
-      dbError = e.message || 'Storage full or blocked';
-      console.error('DB.set error:', e);
-      showSaveError(dbError);
-    }
-  }
+const firebaseConfig = {
+  apiKey: "AIzaSyCLnxzrfw0CsufXiWah4HyOKZ9i7XmMb8k",
+  authDomain: "somewhereelsweyr-4eedb.firebaseapp.com",
+  databaseURL: "https://somewhereelsweyr-4eedb-default-rtdb.firebaseio.com",
+  projectId: "somewhereelsweyr-4eedb",
+  storageBucket: "somewhereelsweyr-4eedb.firebasestorage.app",
+  messagingSenderId: "784921556776",
+  appId: "1:784921556776:web:998133c8ef5db9b773021d",
+  measurementId: "G-FN2DZL2RF3"
 };
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const SYNC_ROOT = db.ref('ledger');
+
+// ═══════════════════════════════════════════════
+// SYNC STATE
+// ═══════════════════════════════════════════════
+let isConnected = false;
+let isFirstLoad = true;
+let pendingWrites = 0;
+
+// ═══════════════════════════════════════════════
+// DATA VARIABLES (synced from Firebase)
+// ═══════════════════════════════════════════════
+let stockItems = [];
+let tradeLog = [];
+let rentSettings = {
+  weeklyRent: 0, reserve: 0,
+  nextDue: new Date(Date.now()+7*86400000).toISOString().split('T')[0],
+  lastPaid: null, isPaid: false
+};
+let employees = [];
+let storageUnits = [];
+let storageHistory = [];
+let pricingItems = [];
+let calcHistory = [];
+
+// Init 8 storage units if empty
+function defaultStorageUnits() {
+  const units = [];
+  for (let i = 1; i <= 8; i++) {
+    units.push({
+      id: i, name: 'Unit ' + i, tenant: '',
+      weeklyRent: 0,
+      dueDate: new Date(Date.now()+7*86400000).toISOString().split('T')[0],
+      paid: false
+    });
+  }
+  return units;
+}
+
+// ═══════════════════════════════════════════════
+// FIREBASE SYNC — Push local data to cloud
+// ═══════════════════════════════════════════════
+function fbPush(key, val) {
+  pendingWrites++;
+  updateSyncStatus();
+  SYNC_ROOT.child(key).set(val).then(() => {
+    pendingWrites--;
+    updateSyncStatus();
+    showSaveIndicator();
+  }).catch(e => {
+    pendingWrites--;
+    updateSyncStatus();
+    showSaveError(e.message || 'Sync failed');
+  });
+}
+
+// ═══════════════════════════════════════════════
+// FIREBASE SYNC — Listen for remote changes
+// ═══════════════════════════════════════════════
+function fbListen(key, target, callback) {
+  SYNC_ROOT.child(key).on('value', (snap) => {
+    const val = snap.val();
+    if (val !== null && val !== undefined) {
+      if (Array.isArray(val) && Array.isArray(target)) {
+        target.length = 0;
+        target.push(...val);
+      } else if (typeof val === 'object' && !Array.isArray(val) && typeof target === 'object') {
+        Object.assign(target, val);
+      }
+    }
+    if (callback) callback();
+    if (isFirstLoad) {
+      isFirstLoad = false;
+      renderAll();
+    }
+  });
+}
+
+// Listen for connection state
+db.ref('.info/connected').on('value', (snap) => {
+  isConnected = snap.val() === true;
+  updateSyncStatus();
+});
 
 // ═══════════════════════════════════════════════
 // SAVE INDICATOR
@@ -1280,7 +1361,7 @@ function showSaveIndicator() {
     el.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--green-dim);color:var(--green);padding:6px 16px;border-radius:20px;font-size:12px;font-weight:600;z-index:9000;opacity:0;transition:opacity 0.3s;pointer-events:none;border:1px solid rgba(52,211,153,0.2);';
     document.body.appendChild(el);
   }
-  el.textContent = '✓ Saved';
+  el.textContent = '✓ Synced';
   el.style.opacity = '1';
   clearTimeout(el._timer);
   el._timer = setTimeout(() => { el.style.opacity = '0'; }, 1500);
@@ -1296,11 +1377,75 @@ function showSaveError(msg) {
   }
   el.style.background = 'var(--red-dim)';
   el.style.color = 'var(--red)';
-  el.textContent = '⚠ Save failed: ' + msg;
+  el.textContent = '⚠ Sync failed: ' + msg;
   el.style.opacity = '1';
   clearTimeout(el._timer);
   el._timer = setTimeout(() => { el.style.opacity = '0'; }, 4000);
 }
+
+// ═══════════════════════════════════════════════
+// SYNC STATUS IN TOP BAR
+// ═══════════════════════════════════════════════
+function updateSyncStatus() {
+  const dot = document.getElementById('syncDot');
+  const label = document.getElementById('syncLabel');
+  if (!dot || !label) return;
+
+  if (!isConnected) {
+    dot.className = 'status-dot status-due';
+    label.textContent = 'Offline';
+    label.style.color = 'var(--red)';
+  } else if (pendingWrites > 0) {
+    dot.className = 'status-dot status-pending';
+    label.textContent = 'Syncing…';
+    label.style.color = 'var(--yellow)';
+  } else {
+    dot.className = 'status-dot status-paid';
+    label.textContent = 'Synced';
+    label.style.color = 'var(--green)';
+  }
+}
+
+// ═══════════════════════════════════════════════
+// INITIALIZE LISTENERS
+// ═══════════════════════════════════════════════
+function initFirebaseListeners() {
+  fbListen('stockItems', stockItems, renderStock);
+  fbListen('tradeLog', tradeLog, renderStock);
+  fbListen('rentSettings', rentSettings, renderRentWages);
+  fbListen('employees', employees, renderRentWages);
+  fbListen('storageUnits', storageUnits, () => {
+    // First run: if Firebase has no data, seed 8 default units
+    if (storageUnits.length === 0) {
+      const defaults = [];
+      for (let i = 1; i <= 8; i++) {
+        defaults.push({
+          id: i, name: 'Unit ' + i, tenant: '',
+          weeklyRent: 0,
+          dueDate: new Date(Date.now()+7*86400000).toISOString().split('T')[0],
+          paid: false
+        });
+      }
+      storageUnits.push(...defaults);
+      fbPush('storageUnits', storageUnits);
+    }
+    renderStorage();
+  });
+  fbListen('storageHistory', storageHistory, renderStorage);
+  fbListen('pricingItems', pricingItems, renderPricing);
+  fbListen('calcHistory', calcHistory, null);
+}
+
+// ═══════════════════════════════════════════════
+// SAVE HELPERS — Push to Firebase
+// ═══════════════════════════════════════════════
+function saveStock() { fbPush('stockItems', stockItems); }
+function saveTrades() { fbPush('tradeLog', tradeLog); }
+function saveRent() { fbPush('rentSettings', rentSettings); }
+function saveEmps() { fbPush('employees', employees); }
+function saveStorage() { fbPush('storageUnits', storageUnits); }
+function saveStorageHistory() { fbPush('storageHistory', storageHistory); }
+function savePricing() { fbPush('pricingItems', pricingItems); }
 
 // ═══════════════════════════════════════════════
 // TAB SWITCHING
@@ -1312,29 +1457,6 @@ function switchTab(id) {
   document.getElementById('tab-' + id).classList.add('active');
   renderAll();
 }
-
-// ═══════════════════════════════════════════════
-// STORAGE HEALTH CHECK
-// ═══════════════════════════════════════════════
-function checkStorage() {
-  const dot = document.getElementById('storageDot');
-  const label = document.getElementById('storageLabel');
-  if (!dot || !label) return;
-
-  try {
-    const testKey = '_se_storage_test_';
-    localStorage.setItem(testKey, '1');
-    localStorage.removeItem(testKey);
-    dot.className = 'status-dot status-paid';
-    label.textContent = 'Storage OK';
-    label.style.color = 'var(--green)';
-  } catch(e) {
-    dot.className = 'status-dot status-due';
-    label.textContent = 'Storage blocked!';
-    label.style.color = 'var(--red)';
-  }
-}
-checkStorage();
 
 // ═══════════════════════════════════════════════
 // MODAL HELPERS
@@ -2107,21 +2229,13 @@ document.getElementById('loginPassword')?.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') attemptLogin();
 });
 
-// Gate: only show ledger if logged in
-// Data loads from localStorage on every renderAll() call regardless
+// Gate: Start Firebase listeners immediately so data syncs in the background
+// Login only controls visibility of the UI — all data is always syncing
+initFirebaseListeners();
+
 if (isLoggedIn()) {
   document.getElementById('loginOverlay').classList.add('hidden');
-  renderAll();
-} else {
-  // Still load data silently so it's ready on login
-  stockItems = DB.get('stockItems', []);
-  tradeLog = DB.get('tradeLog', []);
-  employees = DB.get('employees', []);
-  rentSettings = DB.get('rentSettings', rentSettings);
-  storageUnits = DB.get('storageUnits', storageUnits.length ? storageUnits : storageUnits);
-  storageHistory = DB.get('storageHistory', []);
-  pricingItems = DB.get('pricingItems', []);
-  calcHistory = DB.get('calcHistory', []);
+  // renderAll() will fire automatically when Firebase data arrives
 }
 
 // ═══════════════════════════════════════════════
