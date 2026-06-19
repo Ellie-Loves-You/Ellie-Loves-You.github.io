@@ -1520,11 +1520,6 @@ function catColor(cat) {
 // ═══════════════════════════════════════════════
 // TAB 1 — STOCK MANAGEMENT
 // ═══════════════════════════════════════════════
-let stockItems = DB.get('stockItems', []);
-let tradeLog = DB.get('tradeLog', []);
-
-function saveStock() { DB.set('stockItems', stockItems); }
-function saveTrades() { DB.set('tradeLog', tradeLog); }
 
 function openStockModal(editId) {
   document.getElementById('modalStockTitle').textContent = editId != null ? 'Edit Stock Item' : 'Add Stock Item';
@@ -1678,18 +1673,6 @@ function renderStock() {
 // ═══════════════════════════════════════════════
 // TAB 2 — RENT & WAGES
 // ═══════════════════════════════════════════════
-let rentSettings = DB.get('rentSettings', {
-  weeklyRent: 0,
-  reserve: 0,
-  nextDue: addDays(todayStr(), 7),
-  lastPaid: null,
-  isPaid: false
-});
-let employees = DB.get('employees', []);
-
-function saveRent() { DB.set('rentSettings', rentSettings); }
-function saveEmps() { DB.set('employees', employees); }
-
 function openRentModal() {
   document.getElementById('rw_m_rentAmount').value = rentSettings.weeklyRent || '';
   document.getElementById('rw_m_reserve').value = rentSettings.reserve || '';
@@ -1861,12 +1844,8 @@ function renderRentWages() {
 
 // ═══════════════════════════════════════════════
 // TAB 3 — STORAGE UNITS
-// ═══════════════════════════════════════════════
-let storageUnits = DB.get('storageUnits', []);
-let storageHistory = DB.get('storageHistory', []);
+// ════════════════════════════════════════════<longcat_arg_value>
 
-function saveStorage() { DB.set('storageUnits', storageUnits); }
-function saveStorageHistory() { DB.set('storageHistory', storageHistory); }
 
 // Init 8 units if empty
 if (!storageUnits.length) {
@@ -2026,9 +2005,6 @@ function renderStorage() {
 // ═══════════════════════════════════════════════
 // TAB 4 — PRICING LIST
 // ═══════════════════════════════════════════════
-let pricingItems = DB.get('pricingItems', []);
-
-function savePricing() { DB.set('pricingItems', pricingItems); }
 
 function openPriceModal(editId) {
   document.getElementById('modalPriceTitle').textContent = editId != null ? 'Edit Pricing' : 'Add Pricing Item';
@@ -2260,7 +2236,6 @@ if (isLoggedIn()) {
 let calcExpression = '';
 let calcResult = '0';
 let calcMemory = 0;
-let calcHistory = DB.get('calcHistory', []);
 let calcJustEvaluated = false;
 let calcMode = 'basic'; // basic, trade
 
@@ -2351,7 +2326,7 @@ function calcEvaluate() {
       // Log to history
       calcHistory.unshift({ expr: calcExpression, val: calcResult });
       if (calcHistory.length > 30) calcHistory = calcHistory.slice(0, 30);
-      DB.set('calcHistory', calcHistory);
+      if (window.__firebaseReady__) fbPush('calcHistory', calcHistory);
       calcRenderHistory();
     }
     calcJustEvaluated = true;
