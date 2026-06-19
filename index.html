@@ -1263,10 +1263,22 @@ const firebaseConfig = {
   measurementId: "G-FN2DZL2RF3"
 };
 
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-const SYNC_ROOT = db.ref('ledger');
+// Initialize Firebase with error handling
+var db, SYNC_ROOT;
+if (typeof firebase === 'undefined') {
+  console.error('Firebase SDK not loaded');
+  window.__firebaseReady__ = false;
+} else {
+  try {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.database();
+    SYNC_ROOT = db.ref('ledger');
+    window.__firebaseReady__ = true;
+  } catch(e) {
+    console.error('Firebase init failed:', e);
+    window.__firebaseReady__ = false;
+  }
+}
 
 // ═══════════════════════════════════════════════
 // SYNC STATE
@@ -1309,6 +1321,7 @@ function defaultStorageUnits() {
 // FIREBASE SYNC — Push local data to cloud
 // ═══════════════════════════════════════════════
 function fbPush(key, val) {
+  if (!window.__firebaseReady__) return;
   pendingWrites++;
   updateSyncStatus();
   SYNC_ROOT.child(key).set(val).then(() => {
@@ -1326,6 +1339,7 @@ function fbPush(key, val) {
 // FIREBASE SYNC — Listen for remote changes
 // ═══════════════════════════════════════════════
 function fbListen(key, target, callback) {
+  if (!window.__firebaseReady__) return;
   SYNC_ROOT.child(key).on('value', (snap) => {
     const val = snap.val();
     if (val !== null && val !== undefined) {
@@ -1345,10 +1359,12 @@ function fbListen(key, target, callback) {
 }
 
 // Listen for connection state
-db.ref('.info/connected').on('value', (snap) => {
-  isConnected = snap.val() === true;
-  updateSyncStatus();
-});
+if (window.__firebaseReady__) {
+  db.ref('.info/connected').on('value', (snap) => {
+    isConnected = snap.val() === true;
+    updateSyncStatus();
+  });
+}
 
 // ═══════════════════════════════════════════════
 // SAVE INDICATOR
