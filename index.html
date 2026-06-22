@@ -1439,8 +1439,19 @@ function initFirebaseListeners() {
 
   // Storage units: seed defaults only if Firebase has NO data, then listen
   if (window.__firebaseReady__) {
+    let storageInitialized = false;
     SYNC_ROOT.child('storageUnits').once('value', (snap) => {
-      if (!snap.val()) {
+      if (storageInitialized) return; // prevent double-init
+      storageInitialized = true;
+      const existing = snap.val();
+      if (existing) {
+        storageUnits.length = 0;
+        if (Array.isArray(existing)) {
+          storageUnits.push(...existing);
+        } else if (typeof existing === 'object') {
+          storageUnits.push(...Object.values(existing));
+        }
+      } else {
         const defaults = [];
         for (let i = 1; i <= 8; i++) {
           defaults.push({
@@ -1454,7 +1465,26 @@ function initFirebaseListeners() {
         fbPush('storageUnits', storageUnits);
       }
       fbListen('storageUnits', storageUnits, renderStorage);
+      renderStorage();
     });
+    // Safety: if once() never fires (e.g. network issue), init with defaults after 3s
+    setTimeout(() => {
+      if (!storageInitialized) {
+        storageInitialized = true;
+        if (storageUnits.length === 0) {
+          for (let i = 1; i <= 8; i++) {
+            storageUnits.push({
+              id: i, name: 'Unit ' + i, tenant: '',
+              weeklyRent: 0,
+              dueDate: new Date(Date.now()+7*86400000).toISOString().split('T')[0],
+              paid: false
+            });
+          }
+        }
+        fbListen('storageUnits', storageUnits, renderStorage);
+        renderStorage();
+      }
+    }, 3000);
   }
 
   fbListen('storageHistory', storageHistory, renderStorage);
@@ -1854,23 +1884,8 @@ function renderRentWages() {
 
 // ═══════════════════════════════════════════════
 // TAB 3 — STORAGE UNITS
-// ════════════════════════════════════════════<longcat_arg_value>
-
-
-// Init 8 units if empty
-if (!storageUnits.length) {
-  for (let i = 1; i <= 8; i++) {
-    storageUnits.push({
-      id: i,
-      name: 'Unit ' + i,
-      tenant: '',
-      weeklyRent: 0,
-      dueDate: addDays(todayStr(), 7),
-      paid: false
-    });
-  }
-  saveStorage();
-}
+// TAB 3 — STORAGE UNITS
+// ═══════════════════════════════════════════════
 
 function openStorageModal(unitId) {
   const u = storageUnits.find(x => x.id === unitId);
