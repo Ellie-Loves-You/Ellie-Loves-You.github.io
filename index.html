@@ -958,6 +958,7 @@
   <div class="card" style="margin-top:18px">
     <div class="card-header">
       <div class="card-title">📋 Storage History Log</div>
+      <button class="btn btn-ghost btn-sm" onclick="clearStorageHistory()">🗑️ Clear History</button>
     </div>
     <div class="table-wrap">
       <table>
@@ -1437,24 +1438,24 @@ function initFirebaseListeners() {
   fbListen('employees', employees, renderRentWages);
 
   // Storage units: seed defaults only if Firebase has NO data, then listen
-  SYNC_ROOT.child('storageUnits').once('value', (snap) => {
-    if (!snap.val()) {
-      // Firebase is completely empty — seed default 8 units
-      const defaults = [];
-      for (let i = 1; i <= 8; i++) {
-        defaults.push({
-          id: i, name: 'Unit ' + i, tenant: '',
-          weeklyRent: 0,
-          dueDate: new Date(Date.now()+7*86400000).toISOString().split('T')[0],
-          paid: false
-        });
+  if (window.__firebaseReady__) {
+    SYNC_ROOT.child('storageUnits').once('value', (snap) => {
+      if (!snap.val()) {
+        const defaults = [];
+        for (let i = 1; i <= 8; i++) {
+          defaults.push({
+            id: i, name: 'Unit ' + i, tenant: '',
+            weeklyRent: 0,
+            dueDate: new Date(Date.now()+7*86400000).toISOString().split('T')[0],
+            paid: false
+          });
+        }
+        storageUnits.push(...defaults);
+        fbPush('storageUnits', storageUnits);
       }
-      storageUnits.push(...defaults);
-      fbPush('storageUnits', storageUnits);
-    }
-    // Now attach the real-time listener (after seeding decision is made)
-    fbListen('storageUnits', storageUnits, renderStorage);
-  });
+      fbListen('storageUnits', storageUnits, renderStorage);
+    });
+  }
 
   fbListen('storageHistory', storageHistory, renderStorage);
   fbListen('pricingItems', pricingItems, renderPricing);
@@ -2009,6 +2010,13 @@ function renderStorage() {
       </tr>
     `).join('');
   }
+}
+
+function clearStorageHistory() {
+  if (!confirm('Clear all storage history? This cannot be undone.')) return;
+  storageHistory.length = 0;
+  saveStorageHistory();
+  renderStorage();
 }
 
 // ═══════════════════════════════════════════════
