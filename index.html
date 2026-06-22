@@ -1435,9 +1435,11 @@ function initFirebaseListeners() {
   fbListen('tradeLog', tradeLog, renderStock);
   fbListen('rentSettings', rentSettings, renderRentWages);
   fbListen('employees', employees, renderRentWages);
-  fbListen('storageUnits', storageUnits, () => {
-    // First run: if Firebase has no data, seed 8 default units
-    if (storageUnits.length === 0) {
+
+  // Storage units: seed defaults only if Firebase has NO data, then listen
+  SYNC_ROOT.child('storageUnits').once('value', (snap) => {
+    if (!snap.val()) {
+      // Firebase is completely empty — seed default 8 units
       const defaults = [];
       for (let i = 1; i <= 8; i++) {
         defaults.push({
@@ -1450,8 +1452,10 @@ function initFirebaseListeners() {
       storageUnits.push(...defaults);
       fbPush('storageUnits', storageUnits);
     }
-    renderStorage();
+    // Now attach the real-time listener (after seeding decision is made)
+    fbListen('storageUnits', storageUnits, renderStorage);
   });
+
   fbListen('storageHistory', storageHistory, renderStorage);
   fbListen('pricingItems', pricingItems, renderPricing);
   fbListen('calcHistory', calcHistory, null);
