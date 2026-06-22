@@ -159,6 +159,7 @@
   .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
   .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; }
   .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 18px; }
+  .grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 18px; }
   /* ── Stat Cards ── */
   .stat-card {
     background: var(--bg3);
@@ -404,6 +405,7 @@
     .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
     .form-row, .form-row-3, .form-row-4 { grid-template-columns: 1fr; }
     .storage-grid { grid-template-columns: 1fr 1fr; }
+    .grid-5 { grid-template-columns: 1fr 1fr; }
   }
 
   /* ═══ CALCULATOR ═══ */
@@ -757,7 +759,7 @@
      ═══════════════════════════════════════════ -->
 <div class="tab-panel active" id="tab-stock">
   <!-- Stats Row -->
-  <div class="grid-4" style="margin-bottom:18px">
+  <div class="grid-5" style="margin-bottom:18px">
     <div class="stat-card purple">
       <div class="stat-label">Total Items</div>
       <div class="stat-value" id="st_totalItems">0</div>
@@ -767,6 +769,11 @@
       <div class="stat-label">Stock Entries</div>
       <div class="stat-value" id="st_totalEntries">0</div>
       <div class="stat-sub">total quantity</div>
+    </div>
+    <div class="stat-card blue">
+      <div class="stat-label">Total Stock Value</div>
+      <div class="stat-value" id="st_totalValue">0 G</div>
+      <div class="stat-sub" id="st_totalValueSub">based on pricing list</div>
     </div>
     <div class="stat-card yellow">
       <div class="stat-label">Trades Today</div>
@@ -1658,8 +1665,23 @@ function renderStock() {
   const todayTrades = tradeLog.filter(t => t.date === today);
   const lowStock = stockItems.filter(x => x.qty <= 5).length;
 
+  // Total stock value: for each stock item, find matching pricing entry by name
+  // and calculate qty × (buyPrice / buyPer) per unit
+  let totalValue = 0;
+  let valuedItems = 0;
+  stockItems.forEach(si => {
+    const price = pricingItems.find(p => p.item.toLowerCase() === (si.name || '').toLowerCase());
+    if (price && price.buyPrice > 0 && price.buyPer > 0) {
+      const perUnit = price.buyPrice / price.buyPer;
+      totalValue += si.qty * perUnit;
+      valuedItems++;
+    }
+  });
+
   document.getElementById('st_totalItems').textContent = stockItems.length;
   document.getElementById('st_totalEntries').textContent = totalQty;
+  document.getElementById('st_totalValue').textContent = totalValue.toLocaleString('en-US', {maximumFractionDigits: 2}) + ' G';
+  document.getElementById('st_totalValueSub').textContent = valuedItems + '/' + stockItems.length + ' items priced';
   document.getElementById('st_tradesToday').textContent = todayTrades.length;
   document.getElementById('st_tradesTodaySub').textContent = todayTrades.length + ' logged today';
   document.getElementById('st_lowStock').textContent = lowStock;
