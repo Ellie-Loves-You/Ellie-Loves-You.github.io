@@ -1343,10 +1343,15 @@ function fbListen(key, target, callback) {
   SYNC_ROOT.child(key).on('value', (snap) => {
     const val = snap.val();
     if (val !== null && val !== undefined) {
-      if (Array.isArray(val) && Array.isArray(target)) {
+      if (Array.isArray(target)) {
         target.length = 0;
-        target.push(...val);
-      } else if (typeof val === 'object' && !Array.isArray(val) && typeof target === 'object') {
+        if (Array.isArray(val)) {
+          target.push(...val);
+        } else if (typeof val === 'object') {
+          // Firebase stores arrays as objects with numeric string keys
+          target.push(...Object.values(val));
+        }
+      } else if (typeof val === 'object' && typeof target === 'object') {
         Object.assign(target, val);
       }
     }
