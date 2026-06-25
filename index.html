@@ -752,6 +752,9 @@
   <button class="tab-btn" onclick="switchTab('pricing')">
     <span class="tab-icon">💰</span> Pricing List
   </button>
+  <button class="tab-btn" onclick="switchTab('orders')">
+    <span class="tab-icon">📋</span> Orders & Notes
+  </button>
 </div>
 
 <!-- ═══════════════════════════════════════════
@@ -830,6 +833,7 @@
               <th>Item</th>
               <th>Qty</th>
               <th>G</th>
+              <th>Clerk</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -1033,6 +1037,79 @@
   </div>
 </div>
 
+<!-- ═══════════════════════════════════════════
+     TAB 5 — ORDERS & NOTES
+     ═══════════════════════════════════════════ -->
+<div class="tab-panel" id="tab-orders">
+  <!-- Stats -->
+  <div class="grid-3" style="margin-bottom:18px">
+    <div class="stat-card purple">
+      <div class="stat-label">Active Orders</div>
+      <div class="stat-value" id="or_activeCount">0</div>
+      <div class="stat-sub">orders in progress</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-label">Completed Orders</div>
+      <div class="stat-value" id="or_completedCount">0</div>
+      <div class="stat-sub">orders fulfilled</div>
+    </div>
+    <div class="stat-card blue">
+      <div class="stat-label">Notes</div>
+      <div class="stat-value" id="or_notesCount">0</div>
+      <div class="stat-sub">saved notes</div>
+    </div>
+  </div>
+
+  <!-- New Order -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">📝 New Order</div>
+    </div>
+    <div class="form-row" style="margin-bottom:12px">
+      <div class="form-group">
+        <label>Clerk (who set up)</label>
+        <input type="text" id="or_m_clerk" placeholder="Your name">
+      </div>
+      <div class="form-group">
+        <label>Order With (customer/party)</label>
+        <input type="text" id="or_m_party" placeholder="e.g. Blacksmith Guild">
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>Order Description</label>
+      <textarea id="or_m_description" rows="3" placeholder="What is the order about? Items, quantities, prices..." style="width:100%;padding:9px 12px;background:var(--bg4);border:1px solid var(--border-light);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;resize:vertical;"></textarea>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="saveOrder()">+ Create Order</button>
+    </div>
+  </div>
+
+  <!-- Orders List -->
+  <div class="card" style="margin-top:18px">
+    <div class="card-header">
+      <div class="card-title">📋 Orders</div>
+      <div class="btn-group">
+        <button class="btn btn-ghost btn-sm" onclick="renderOrders()">🔄 Refresh</button>
+      </div>
+    </div>
+    <div id="or_ordersList"></div>
+  </div>
+
+  <!-- Notes -->
+  <div class="card" style="margin-top:18px">
+    <div class="card-header">
+      <div class="card-title">📝 Quick Notes</div>
+    </div>
+    <div style="margin-bottom:12px">
+      <textarea id="or_m_note" rows="3" placeholder="Write a quick note..." style="width:100%;padding:9px 12px;background:var(--bg4);border:1px solid var(--border-light);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;resize:vertical;"></textarea>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="saveNote()">+ Save Note</button>
+    </div>
+    <div id="or_notesList" style="margin-top:16px"></div>
+  </div>
+</div>
+
 <!-- ═══ MODALS ═══ -->
 <!-- Stock Add/Edit Modal -->
 <div class="modal-overlay" id="modal-stock">
@@ -1078,9 +1155,15 @@
         </select>
       </div>
       <div class="form-group">
-        <label>Item</label>
-        <select id="tr_m_item"></select>
+        <label>Category</label>
+        <select id="tr_m_category" onchange="trFilterByCategory()">
+          <option value="">All Categories</option>
+        </select>
       </div>
+    </div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>Item</label>
+      <select id="tr_m_item"></select>
     </div>
     <div class="form-row" style="margin-bottom:12px">
       <div class="form-group">
@@ -1091,6 +1174,10 @@
         <label>Gold (G) — optional</label>
         <input type="number" id="tr_m_gold" placeholder="0" min="0">
       </div>
+    </div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>Clerk Name</label>
+      <input type="text" id="tr_m_clerk" placeholder="Who is logging this trade?">
     </div>
     <div class="form-group" style="margin-bottom:12px">
       <label>Note (optional)</label>
@@ -1310,6 +1397,8 @@ let storageUnits = [];
 let storageHistory = [];
 let pricingItems = [];
 let calcHistory = [];
+let ordersList = [];
+let notesList = [];
 
 // Init 8 storage units if empty
 function defaultStorageUnits() {
@@ -1437,7 +1526,6 @@ function updateSyncStatus() {
 
 // ═══════════════════════════════════════════════
 // INITIALIZE LISTENERS
-// ═══════════════════════════════════════════════
 function initFirebaseListeners() {
   fbListen('stockItems', stockItems, renderStock);
   fbListen('tradeLog', tradeLog, renderStock);
@@ -1448,7 +1536,7 @@ function initFirebaseListeners() {
   if (window.__firebaseReady__) {
     let storageInitialized = false;
     SYNC_ROOT.child('storageUnits').once('value', (snap) => {
-      if (storageInitialized) return; // prevent double-init
+      if (storageInitialized) return;
       storageInitialized = true;
       const existing = snap.val();
       if (existing) {
@@ -1497,6 +1585,8 @@ function initFirebaseListeners() {
   fbListen('storageHistory', storageHistory, renderStorage);
   fbListen('pricingItems', pricingItems, renderPricing);
   fbListen('calcHistory', calcHistory, null);
+  fbListen('ordersList', ordersList, renderOrders);
+  fbListen('notesList', notesList, renderOrders);
 }
 
 // ═══════════════════════════════════════════════
@@ -1509,6 +1599,8 @@ function saveEmps() { fbPush('employees', employees); }
 function saveStorage() { fbPush('storageUnits', storageUnits); }
 function saveStorageHistory() { fbPush('storageHistory', storageHistory); }
 function savePricing() { fbPush('pricingItems', pricingItems); }
+function saveOrdersList() { fbPush('ordersList', ordersList); }
+function saveNotesList() { fbPush('notesList', notesList); }
 
 // ═══════════════════════════════════════════════
 // TAB SWITCHING
@@ -1609,16 +1701,33 @@ function deleteStockItem(id) {
 }
 
 function openTradeModal() {
-  const sel = document.getElementById('tr_m_item');
-  sel.innerHTML = '<option value="">— Select Item —</option>';
-  stockItems.forEach(it => {
-    sel.innerHTML += `<option value="${it.id}">${it.name} (have: ${it.qty})</option>`;
+  // Populate category filter
+  const catSel = document.getElementById('tr_m_category');
+  catSel.innerHTML = '<option value="">All Categories</option>';
+  const cats = [...new Set(stockItems.map(x => x.category).filter(Boolean))].sort();
+  cats.forEach(c => {
+    catSel.innerHTML += `<option value="${c}">${c}</option>`;
   });
+
+  // Populate items
+  trFilterByCategory();
+
   document.getElementById('tr_m_type').value = 'buy';
   document.getElementById('tr_m_qty').value = '';
   document.getElementById('tr_m_gold').value = '';
+  document.getElementById('tr_m_clerk').value = '';
   document.getElementById('tr_m_note').value = '';
   openModal('modal-trade');
+}
+
+function trFilterByCategory() {
+  const cat = document.getElementById('tr_m_category').value;
+  const sel = document.getElementById('tr_m_item');
+  sel.innerHTML = '<option value="">— Select Item —</option>';
+  const filtered = cat ? stockItems.filter(x => x.category === cat) : stockItems;
+  filtered.forEach(it => {
+    sel.innerHTML += `<option value="${it.id}">${it.name} (have: ${it.qty})</option>`;
+  });
 }
 
 function saveTrade() {
@@ -1626,6 +1735,7 @@ function saveTrade() {
   const itemId = document.getElementById('tr_m_item').value;
   const qty = parseInt(document.getElementById('tr_m_qty').value) || 0;
   const gold = parseFloat(document.getElementById('tr_m_gold').value) || 0;
+  const clerk = document.getElementById('tr_m_clerk').value.trim();
   const note = document.getElementById('tr_m_note').value.trim();
   if (!itemId || qty < 1) return alert('Select an item and enter quantity');
 
@@ -1641,7 +1751,7 @@ function saveTrade() {
   tradeLog.unshift({
     id: Date.now().toString(36),
     date: todayStr(),
-    type, itemName: item.name, itemId, qty, gold, note
+    type, itemName: item.name, itemId, qty, gold, clerk, note
   });
   if (tradeLog.length > 200) tradeLog = tradeLog.slice(0, 200);
   saveTrades();
@@ -1713,7 +1823,7 @@ function renderStock() {
   // Trade table
   const trBody = document.getElementById('st_tradeTable');
   if (!tradeLog.length) {
-    trBody.innerHTML = '<tr><td colspan="6" class="empty-state"><div class="icon">🔄</div>No trades logged</td></tr>';
+    trBody.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="icon">🔄</div>No trades logged</td></tr>';
   } else {
     trBody.innerHTML = tradeLog.slice(0, 50).map(t => `
       <tr>
@@ -1722,6 +1832,7 @@ function renderStock() {
         <td>${t.itemName}</td>
         <td>${t.qty}</td>
         <td>${t.gold ? t.gold + ' G' : '—'}</td>
+        <td>${t.clerk || '—'}</td>
         <td>
           <div class="action-btns">
             <button class="btn btn-ghost btn-sm" onclick="deleteTrade('${t.id}')">🗑️</button>
@@ -2282,6 +2393,122 @@ initFirebaseListeners();
 if (isLoggedIn()) {
   document.getElementById('loginOverlay').classList.add('hidden');
   // renderAll() will fire automatically when Firebase data arrives
+}
+
+// ═══════════════════════════════════════════════
+// TAB 5 — ORDERS & NOTES
+// ═══════════════════════════════════════════════
+function saveOrder() {
+  const clerk = document.getElementById('or_m_clerk').value.trim();
+  const party = document.getElementById('or_m_party').value.trim();
+  const description = document.getElementById('or_m_description').value.trim();
+  if (!clerk || !description) return alert('Clerk name and order description are required');
+
+  ordersList.unshift({
+    id: Date.now().toString(36),
+    date: todayStr(),
+    clerk, party, description,
+    status: 'active',
+    created: new Date().toISOString()
+  });
+  if (ordersList.length > 100) ordersList = ordersList.slice(0, 100);
+  saveOrdersList();
+
+  document.getElementById('or_m_clerk').value = '';
+  document.getElementById('or_m_party').value = '';
+  document.getElementById('or_m_description').value = '';
+  renderOrders();
+}
+
+function completeOrder(id) {
+  const o = ordersList.find(x => x.id === id);
+  if (o) {
+    o.status = 'completed';
+    o.completedDate = todayStr();
+    saveOrdersList();
+    renderOrders();
+  }
+}
+
+function deleteOrder(id) {
+  if (!confirm('Delete this order?')) return;
+  ordersList = ordersList.filter(x => x.id !== id);
+  saveOrdersList();
+  renderOrders();
+}
+
+function saveNote() {
+  const note = document.getElementById('or_m_note').value.trim();
+  if (!note) return;
+
+  notesList.unshift({
+    id: Date.now().toString(36),
+    date: todayStr(),
+    text: note,
+    created: new Date().toISOString()
+  });
+  if (notesList.length > 100) notesList = notesList.slice(0, 100);
+  saveNotesList();
+
+  document.getElementById('or_m_note').value = '';
+  renderOrders();
+}
+
+function deleteNote(id) {
+  if (!confirm('Delete this note?')) return;
+  notesList = notesList.filter(x => x.id !== id);
+  saveNotesList();
+  renderOrders();
+}
+
+function renderOrders() {
+  const active = ordersList.filter(o => o.status === 'active').length;
+  const completed = ordersList.filter(o => o.status === 'completed').length;
+
+  document.getElementById('or_activeCount').textContent = active;
+  document.getElementById('or_completedCount').textContent = completed;
+  document.getElementById('or_notesCount').textContent = notesList.length;
+
+  // Orders list
+  const ordersEl = document.getElementById('or_ordersList');
+  if (!ordersList.length) {
+    ordersEl.innerHTML = '<div class="empty-state" style="padding:30px"><div class="icon">📋</div>No orders yet</div>';
+  } else {
+    ordersEl.innerHTML = ordersList.map(o => `
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px;">
+          <div>
+            <span class="status-tag ${o.status === 'active' ? 'pending' : 'paid'}">${o.status === 'active' ? '○ Active' : '✓ Completed'}</span>
+            <span style="font-size:11px;color:var(--text-dim);margin-left:8px">${fmtDate(o.date)}</span>
+          </div>
+          <div class="action-btns">
+            ${o.status === 'active' ? `<button class="btn btn-green btn-sm" onclick="completeOrder('${o.id}')">✓ Complete</button>` : ''}
+            <button class="btn btn-ghost btn-sm" onclick="deleteOrder('${o.id}')">🗑️</button>
+          </div>
+        </div>
+        <div style="font-size:13px;margin-bottom:4px"><strong>Clerk:</strong> ${o.clerk}</div>
+        ${o.party ? `<div style="font-size:13px;margin-bottom:4px"><strong>With:</strong> ${o.party}</div>` : ''}
+        <div style="font-size:13px;color:var(--text-dim);white-space:pre-wrap">${o.description}</div>
+        ${o.completedDate ? `<div style="font-size:11px;color:var(--green);margin-top:6px">Completed: ${fmtDate(o.completedDate)}</div>` : ''}
+      </div>
+    `).join('');
+  }
+
+  // Notes list
+  const notesEl = document.getElementById('or_notesList');
+  if (!notesList.length) {
+    notesEl.innerHTML = '<div class="empty-state" style="padding:20px;font-size:12px;color:var(--text-dim)">No notes yet</div>';
+  } else {
+    notesEl.innerHTML = notesList.map(n => `
+      <div style="display:flex;justify-content:space-between;align-items:start;padding:10px 0;border-bottom:1px solid rgba(42,46,66,0.3);">
+        <div>
+          <div style="font-size:12px;color:var(--text-dim);margin-bottom:3px">${fmtDate(n.date)}</div>
+          <div style="font-size:13px;white-space:pre-wrap">${n.text}</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="deleteNote('${n.id}')" style="flex-shrink:0;margin-left:12px">🗑️</button>
+      </div>
+    `).join('');
+  }
 }
 
 // ═══════════════════════════════════════════════
