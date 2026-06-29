@@ -800,8 +800,14 @@
           <button class="btn btn-ghost btn-sm" onclick="openTradeModal()">🔄 New Trade</button>
         </div>
       </div>
-      <div style="margin-bottom:12px">
-        <input type="text" placeholder="🔍 Search stock..." id="st_search" oninput="renderStock()" style="width:100%">
+      <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center">
+        <input type="text" placeholder="🔍 Search stock..." id="st_search" oninput="renderStock()" style="flex:1">
+        <select id="st_sort" onchange="renderStock()" style="width:auto;min-width:150px">
+          <option value="cat">Sort by: Category</option>
+          <option value="alpha">Sort by: Name (A→Z)</option>
+          <option value="qty_asc">Sort by: Stock (Low→High)</option>
+          <option value="qty_desc">Sort by: Stock (High→Low)</option>
+        </select>
       </div>
       <div class="table-wrap">
         <table>
@@ -1774,8 +1780,6 @@ function deleteTrade(id) {
 }
 
 function renderStock() {
-  const search = (document.getElementById('st_search')?.value || '').toLowerCase();
-
   // Stats
   const totalQty = stockItems.reduce((s, x) => s + x.qty, 0);
   const today = todayStr();
@@ -1804,9 +1808,24 @@ function renderStock() {
   document.getElementById('st_lowStock').textContent = lowStock;
 
   // Stock table
-  const filtered = search ? stockItems.filter(x =>
+  const search = (document.getElementById('st_search')?.value || '').toLowerCase();
+  const sortBy = document.getElementById('st_sort')?.value || 'cat';
+
+  let filtered = search ? stockItems.filter(x =>
     x.name.toLowerCase().includes(search) || (x.category||'').toLowerCase().includes(search)
-  ) : stockItems;
+  ) : [...stockItems];
+
+  // Sort
+  filtered.sort((a, b) => {
+    if (sortBy === 'alpha') return a.name.localeCompare(b.name);
+    if (sortBy === 'qty_asc') return a.qty - b.qty;
+    if (sortBy === 'qty_desc') return b.qty - a.qty;
+    // cat (default): sort by category then name
+    const catA = a.category || 'Uncategorized';
+    const catB = b.category || 'Uncategorized';
+    if (catA !== catB) return catA.localeCompare(catB);
+    return a.name.localeCompare(b.name);
+  });
 
   const tbody = document.getElementById('st_stockTable');
   if (!filtered.length) {
