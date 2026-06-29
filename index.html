@@ -1641,6 +1641,13 @@ function fmtDate(d) {
 }
 function todayStr() { return new Date().toISOString().split('T')[0]; }
 function addDays(d, n) { const r = new Date(d); r.setDate(r.getDate()+n); return r.toISOString().split('T')[0]; }
+function nextThursday(d) {
+  const r = new Date(d || new Date());
+  const day = r.getDay(); // 0=Sun, 4=Thu
+  const daysUntilThurs = ((4 - day + 7) % 7) || 7; // if today is Thursday, go to next Thursday
+  r.setDate(r.getDate() + daysUntilThurs);
+  return r.toISOString().split('T')[0];
+}
 function isPast(d) { return new Date(d) < new Date(new Date().toDateString()); }
 
 // ═══════════════════════════════════════════════
@@ -2051,6 +2058,7 @@ function toggleStoragePaid(id) {
   if (!u) return;
   u.paid = !u.paid;
   if (u.paid) {
+    u.dueDate = nextThursday();
     storageHistory.unshift({
       date: todayStr(), unitName: u.name, tenant: u.tenant,
       amount: u.weeklyRent, status: 'Paid'
@@ -2272,20 +2280,30 @@ function renderPricing() {
     x.item.toLowerCase().includes(search) || (x.category||'').toLowerCase().includes(search)
   );
 
-  // Group by category
+  // Group by category and sort
   const grouped = {};
   filtered.forEach(x => {
     const c = x.category || 'Uncategorized';
     if (!grouped[c]) grouped[c] = [];
     grouped[c].push(x);
   });
+  // Sort items within each category alphabetically
+  Object.keys(grouped).forEach(c => grouped[c].sort((a, b) => a.item.localeCompare(b.item)));
 
   const tbody = document.getElementById('pl_table');
   if (!filtered.length) {
     tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="icon">💰</div>No pricing items yet</td></tr>';
   } else {
     let html = '';
+    let isFirstCat = true;
     Object.keys(grouped).sort().forEach(cat => {
+      // Category header
+      if (!isFirstCat) {
+        html += '<tr><td colspan="7" style="height:6px;background:var(--bg);border:none;"></td></tr>';
+      }
+      isFirstCat = false;
+      html += `<tr><td colspan="7" style="background:var(--bg4);border:none;"><span class="cat-pill" style="background:${catColor(cat)}22;color:${catColor(cat)};font-size:12px;padding:4px 12px;">${cat}</span></td></tr>`;
+      // Items in category
       grouped[cat].forEach(it => {
         const margin = it.buyPer > 0 && it.sellPer > 0 && it.buyPrice > 0 && it.sellPrice > 0
           ? (it.sellPrice / it.sellPer - it.buyPrice / it.buyPer) : null;
