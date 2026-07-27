@@ -528,7 +528,6 @@ button.amber:hover { background: var(--gold2); color: #0f0d08; }
             <th>TYPE</th>
             <th>STORAGE</th>
             <th>DATE ADDED</th>
-            <th>DUE DATE</th>
             <th>LOCATION</th>
             <th>WKS PAID</th>
             <th>WEEKLY RENT</th>
@@ -564,8 +563,6 @@ button.amber:hover { background: var(--gold2); color: #0f0d08; }
     </select>
     <label class="muted" style="font-size:11px;">Date Added:</label>
     <input id="fDateAdded" type="date" value="">
-    <label class="muted" style="font-size:11px;">Due Date (weekly):</label>
-    <input id="fDueDate" type="date" value="">
     <label class="muted" style="font-size:11px;">Weeks Advanced Paid:</label>
     <input id="fPrepaidWeeks" type="number" min="0" step="1" value="0" placeholder="0">
     <input id="editId" type="hidden" value="">
@@ -639,7 +636,7 @@ function loadLocalData() {
     const raw = localStorage.getItem(LS_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      const houses = (parsed.houses || []).map(h => ({ ...h, dateAdded: h.dateAdded || "—", location: h.location || "in city", dueDate: h.dueDate || "", prepaidWeeks: h.prepaidWeeks || 0 }));
+      const houses = (parsed.houses || []).map(h => ({ ...h, dateAdded: h.dateAdded || "—", location: h.location || "in city", prepaidWeeks: h.prepaidWeeks || 0 }));
       data = { houses, payments: parsed.payments || {}, notes: parsed.notes || {}, version: parsed.version || 1 };
       return;
     }
@@ -800,7 +797,7 @@ function getPaidCount(houseId) {
 function showAddHouse() { document.getElementById("addModal").classList.remove("hidden"); }
 function hideAddModal() {
   document.getElementById("addModal").classList.add("hidden");
-  ["fName","fOwner","fRent","fStor","fGuild","fGuildName","fLocation","fDateAdded","fDueDate"].forEach(x => document.getElementById(x).value = "");
+  ['fName','fOwner','fRent','fStor','fGuild','fGuildName','fLocation','fDateAdded'].forEach(x => document.getElementById(x).value = '');
   document.getElementById("modalTitle").textContent = "Add Property";
   document.getElementById("saveBtn").textContent = "Save";
   document.getElementById("saveBtn").onclick = saveHouse;
@@ -816,15 +813,14 @@ function saveHouse() {
   const factionName = ownership === "faction" ? document.getElementById("fGuildName").value.trim() : "";
   const location = document.getElementById("fLocation").value;
   const dateAdded = document.getElementById("fDateAdded").value || new Date().toISOString().slice(0,10);
-  const dueDate = document.getElementById("fDueDate").value || "";
   const prepaidWeeks = parseIntSafe(document.getElementById("fPrepaidWeeks").value);
   if (!name || (ownership !== "unowned" && !owner)) { alert("Name is required."); return; }
   try {
     if (editingId) {
       const house = data.houses.find(h => h.id === editingId);
-      if (house) Object.assign(house, { name, owner, rent, storage, ownership, factionName, location, dateAdded, dueDate, prepaidWeeks });
+      if (house) Object.assign(house, { name, owner, rent, storage, ownership, factionName, location, dateAdded, prepaidWeeks });
     } else {
-      data.houses.push({ id: h1(), name, owner, rent, storage, ownership, factionName, location, dateAdded, dueDate, prepaidWeeks: prepaidWeeks || 0 });
+      data.houses.push({ id: h1(), name, owner, rent, storage, ownership, factionName, location, dateAdded, prepaidWeeks: prepaidWeeks || 0 });
     }
     editingId = null;
     saveLocalAndMaybeSync();
@@ -847,7 +843,6 @@ function editHouse(id) {
   document.getElementById("fGuildName").value = house.factionName || "";
   document.getElementById("fLocation").value = house.location || "in city";
   document.getElementById("fDateAdded").value = house.dateAdded || "";
-  document.getElementById("fDueDate").value = house.dueDate || "";
   document.getElementById("fPrepaidWeeks").value = house.prepaidWeeks || 0;
   document.getElementById("modalTitle").textContent = "Edit Property";
   document.getElementById("saveBtn").textContent = "Update";
@@ -906,7 +901,7 @@ function filteredResults() {
   const houses = data.houses.slice().sort((a,b) => a.name.localeCompare(b.name));
   const s = (document.getElementById("searchInput").value || "").trim().toLowerCase();
   if (!s) return houses;
-  return houses.filter(h => [h.name, h.owner, h.ownership, h.factionName, h.location, "" + h.storage, "" + h.rent, h.dateAdded, h.dueDate || "", "" + (h.prepaidWeeks || 0)].some(x => String(x).toLowerCase().includes(s)));
+  return houses.filter(h => [h.name, h.owner, h.ownership, h.factionName, h.location, "" + h.storage, "" + h.rent, h.dateAdded, "" + (h.prepaidWeeks || 0)].some(x => String(x).toLowerCase().includes(s)));
 }
 
 // ==================== RENDER ===================
@@ -921,7 +916,7 @@ function render() {
   const s = (document.getElementById("searchInput").value || "").trim().toLowerCase();
   const filtered = houses.filter(h => {
     if (!s) return true;
-    return [h.name, h.owner, h.ownership, h.factionName, h.location, "" + h.storage, "" + h.rent, h.dateAdded, h.dueDate || "", "" + (h.prepaidWeeks || 0)].some(x => String(x).toLowerCase().includes(s));
+    return [h.name, h.owner, h.ownership, h.factionName, h.location, "" + h.storage, "" + h.rent, h.dateAdded, "" + (h.prepaidWeeks || 0)].some(x => String(x).toLowerCase().includes(s));
   });
   const rows = [];
   filtered.forEach((h, i) => {
@@ -952,7 +947,6 @@ function render() {
       <td class="type-tag">${typeDisplay}</td>
       <td class="storage">${h.storage}</td>
       <td>${h.dateAdded || "—"}</td>
-      <td>${h.dueDate ? h.dueDate : '<span class="muted">—</span>'}</td>
       <td><span class="location-tag">${esc(h.location || "in city")}</span></td>
       <td class="storage">${h.prepaidWeeks || 0}</td>
       <td class="rent">${fmtG(h.rent)}</td>
@@ -962,7 +956,7 @@ function render() {
       </td>
     </tr>`);
     rows.push(`<tr class="notes-row ${h.ownership === 'unowned' ? 'hidden-note' : noteHidden}" id="note-${h.id}">
-      <td colspan="11" style="padding:0 12px 12px;">
+      <td colspan="10" style="padding:0 12px 12px;">
         <span class="nhead" style="cursor:pointer;" onclick="toggleNote('${h.id}')">${noteLabel}</span>
         <div class="note-body">
           <button class="weeks-paid-badge" onclick="alert('Weeks paid: ' + getPaidCount('${h.id}'))">Paid: ${paidCount}</button>
