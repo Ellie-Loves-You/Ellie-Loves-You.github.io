@@ -693,20 +693,17 @@ function startSync() {
   if (!db) return;
   const ref = db.ref("propertyLedger");
   ref.on("value", (snap) => {
-    if (snap.exists()) {
-      const v = snap.val();
-      if (JSON.stringify(v) !== JSON.stringify(data)) {
-        data = v;
-        saveLocalData();
-        render();
-      }
-    } else {
-      if (data && data.houses && data.houses.length) {
-        db.ref("propertyLedger").set(data);
-      } else {
-        render();
-      }
-    }
+    const v = snap.val();
+    if (!v || typeof v !== "object") return;
+    const safe = {
+      houses: Array.isArray(v.houses) ? v.houses : [],
+      payments: typeof v.payments === "object" && v.payments ? v.payments : {},
+      notes: typeof v.notes === "object" && v.notes ? v.notes : {},
+      version: typeof v.version === "number" ? v.version : 1
+    };
+    data = safe;
+    saveLocalData();
+    render();
   });
 }
 
@@ -810,6 +807,7 @@ function hideAddModal() {
   document.getElementById("editId").value = "";
 }
 function saveHouse() {
+  if (!data || !Array.isArray(data.houses)) { alert("Ledger not initialized. Reload the app."); return; }
   const name = document.getElementById("fName").value.trim();
   const owner = document.getElementById("fOwner").value.trim();
   const rent = parseIntSafe(document.getElementById("fRent").value);
