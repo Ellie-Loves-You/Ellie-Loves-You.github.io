@@ -821,16 +821,21 @@ function saveHouse() {
   const dueDate = document.getElementById("fDueDate").value || "";
   const prepaidWeeks = parseIntSafe(document.getElementById("fPrepaidWeeks").value);
   if (!name || (ownership !== "unowned" && !owner)) { alert("Name is required."); return; }
-  if (editingId) {
-    const house = data.houses.find(h => h.id === editingId);
-    if (house) Object.assign(house, { name, owner, rent, storage, ownership, factionName, location, dateAdded, dueDate, prepaidWeeks });
-  } else {
-    data.houses.push({ id: h1(), name, owner, rent, storage, ownership, factionName, location, dateAdded, dueDate, prepaidWeeks: prepaidWeeks || 0 });
+  try {
+    if (editingId) {
+      const house = data.houses.find(h => h.id === editingId);
+      if (house) Object.assign(house, { name, owner, rent, storage, ownership, factionName, location, dateAdded, dueDate, prepaidWeeks });
+    } else {
+      data.houses.push({ id: h1(), name, owner, rent, storage, ownership, factionName, location, dateAdded, dueDate, prepaidWeeks: prepaidWeeks || 0 });
+    }
+    editingId = null;
+    saveLocalAndMaybeSync();
+    hideAddModal();
+    render();
+  } catch (e) {
+    console.error("saveHouse failed:", e);
+    alert("Save failed: " + e.message);
   }
-  editingId = null;
-  saveLocalAndMaybeSync();
-  hideAddModal();
-  render();
 }
 function editHouse(id) {
   const house = data.houses.find(h => h.id === id);
